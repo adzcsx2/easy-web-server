@@ -1,0 +1,709 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案 B · 客户端适配器实时 ASR 需求规格</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-soft: #f2f4f7;
+      --line: #d9dee7;
+      --text: #1f2937;
+      --muted: #5f6b7a;
+      --primary: #155eef;
+      --primary-soft: #e8f0ff;
+      --success: #067647;
+      --warning: #b54708;
+      --danger: #b42318;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      --radius: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eef2f7 0%, var(--bg) 180px, var(--bg) 100%);
+      line-height: 1.65;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-inner {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .header-back:hover {
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .header-back svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .header-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .page {
+      width: min(1140px, calc(100vw - 32px));
+      margin: 24px auto 48px;
+      padding-top: 16px;
+    }
+
+    .hero, .toc, .section, .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      border-radius: 24px;
+      padding: 28px 30px;
+      margin-bottom: 18px;
+    }
+
+    .hero-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    h1, h2, h3 { margin: 0; line-height: 1.25; }
+    h1 { font-size: 34px; }
+    h2 { font-size: 24px; margin-bottom: 14px; }
+    h3 { font-size: 18px; margin-bottom: 10px; }
+    p { margin: 0; }
+
+    .subtitle { margin-top: 10px; color: var(--muted); max-width: 780px; }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(160px, 1fr));
+      gap: 10px;
+      min-width: 300px;
+    }
+
+    .meta-item {
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+    }
+
+    .meta-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .meta-value { font-size: 14px; font-weight: 600; }
+
+    .chips {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .chip {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .chip.scope { color: var(--primary); background: var(--primary-soft); border-color: #cddcff; }
+    .chip.goal { color: var(--success); background: #eafaf1; border-color: #c6ead8; }
+    .chip.warn { color: var(--warning); background: #fff4e5; border-color: #f8dbb5; }
+    .chip.risk { color: var(--danger); background: #fff0f0; border-color: #f6caca; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      padding: 18px;
+    }
+
+    .toc a {
+      display: block;
+      text-decoration: none;
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .toc a:hover { background: var(--surface-soft); color: var(--text); }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .section { padding: 24px; }
+    .section-intro { color: var(--muted); margin-bottom: 16px; }
+
+    .two-col, .three-col {
+      display: grid;
+      gap: 16px;
+    }
+
+    .two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .three-col { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card { padding: 18px; }
+    .card-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+
+    .note {
+      background: #f8fbff;
+      border: 1px solid #d8e7ff;
+      color: #1d3a72;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-top: 16px;
+    }
+
+    .warning-note {
+      background: #fff7eb;
+      border: 1px solid #f3d3a4;
+      color: #7a4611;
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      margin-top: 16px;
+    }
+
+    ul { padding-left: 18px; margin: 0; }
+    li + li { margin-top: 6px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-spacing: 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: var(--surface-soft); }
+    tr:last-child td { border-bottom: none; }
+
+    .sequence {
+      background: linear-gradient(180deg, #fbfcfe 0%, #f5f7fb 100%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      overflow-x: auto;
+    }
+
+    svg { display: block; max-width: 100%; height: auto; }
+
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 8px 0 16px;
+    }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .toc { position: static; }
+      .two-col, .three-col, .meta-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="header-back" href="index.html">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8l4-4"/></svg>
+        返回
+      </a>
+      <span class="header-title">Flutter 实时 ASR 方案</span>
+    </div>
+  </header>
+  <div class="page">
+    <header class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>方案 B · 客户端适配器实时 ASR 需求规格</h1>
+          <p class="subtitle">本文定义方案 B 的客户端实现规格：Flutter 库持有统一会话内核和多模型适配器。业务层在调用语音能力前先调用 SDK 的 init，并传入 appName 与可选 userToken；SDK 再请求配置接口获取模型配置并决定是否切换。第一版以 Qwen3-ASR-Flash-Realtime 为首个落地模型。</p>
+        </div>
+        <div class="meta-grid">
+          <div class="meta-item"><div class="meta-label">版本</div><div class="meta-value">v1.0 Draft</div></div>
+          <div class="meta-item"><div class="meta-label">日期</div><div class="meta-value">2026-04-10</div></div>
+          <div class="meta-item"><div class="meta-label">首个模型</div><div class="meta-value">Qwen3-ASR-Flash-Realtime</div></div>
+          <div class="meta-item"><div class="meta-label">并发约束</div><div class="meta-value">同页单会话</div></div>
+        </div>
+      </div>
+      <div class="chips">
+        <span class="chip scope">平台：Android / iOS</span>
+        <span class="chip goal">模式：多供应商并存</span>
+        <span class="chip warn">切换：页面级拉配置，变化才切换</span>
+        <span class="chip risk">高风险前提：长期 apiKey</span>
+      </div>
+      <div class="warning-note">高风险前提：当前方案接受后端向 Flutter 返回长期 apiKey。后端仍负责统一管理、吊销和轮换密钥，但这只是在当前业务约束下的风险收敛手段，不意味着它已经成为长期推荐安全基线。</div>
+    </header>
+
+    <div class="layout">
+      <aside class="toc">
+        <h3>目录</h3>
+        <a href="#scope">1. 范围与前提</a>
+        <a href="#architecture">2. 总体架构</a>
+        <a href="#config">3. 配置获取与切换规则</a>
+        <a href="#adapter">4. 统一模型接口与适配器</a>
+        <a href="#session">5. 会话与状态机</a>
+        <a href="#events">6. 事件与错误模型</a>
+        <a href="#security">7. 安全前提与边界</a>
+        <a href="#first-model">8. 第一版首模型要求</a>
+        <a href="#testing">9. 测试与验收</a>
+        <a href="#diagram-config">10. 配置切换时序图</a>
+        <a href="#diagram-main">11. 标准识别时序图</a>
+        <a href="#diagram-failure">12. 异常收口时序图</a>
+      </aside>
+
+      <main class="content">
+        <section id="scope" class="section">
+          <h2>1. 范围与前提</h2>
+          <table>
+            <thead>
+              <tr><th>项</th><th>约束</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>平台范围</td><td>仅支持 Android 和 iOS。</td></tr>
+              <tr><td>识别范围</td><td>仅支持实时流识别，不承诺离线能力，不承诺断线无缝续识别。</td></tr>
+              <tr><td>配置来源</td><td>业务层调用 SDK 的 init 后，由 SDK 请求后端配置接口获取 apiKey、模型、endpoint 等运行期配置；请求必须至少带 appName，必要时可带环境、渠道等参数。</td></tr>
+              <tr><td>用户维度</td><td>是否附带 userToken 由业务需求决定；若后端只按 appName 维度下发配置，userToken 可以为空。</td></tr>
+              <tr><td>权限边界</td><td>麦克风权限检查与申请由业务层完成；SDK 不主动申请权限，只在权限未就绪导致录音初始化失败时返回明确错误。</td></tr>
+              <tr><td>切换策略</td><td>配置相同则不切换；配置不同才切换；切换只影响新建会话，不影响进行中的会话。</td></tr>
+              <tr><td>并发约束</td><td>同一页面不允许并行多个识别会话。</td></tr>
+              <tr><td>多厂商策略</td><td>允许多供应商并存，但每次会话只绑定一个模型适配器。</td></tr>
+              <tr><td>错误与事件</td><td>必须保留供应商原始错误码、原始消息和原始事件直返。</td></tr>
+              <tr><td>第一版目标</td><td>先定统一架构并打通 Qwen3-ASR-Flash-Realtime。</td></tr>
+            </tbody>
+          </table>
+          <div class="note">本方案中，“模型能力”由适配器实现层声明和处理，而不是要求业务方在统一配置里传递厂商特有能力参数。统一配置只承载路由和必要连接信息。</div>
+        </section>
+
+        <section id="architecture" class="section">
+          <h2>2. 总体架构</h2>
+          <p class="section-intro">方案 B 的核心不是一个统一后端协议，而是一个统一会话内核，加上一组按模型实现的适配器。</p>
+          <table>
+            <thead>
+              <tr><th>模块</th><th>职责</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>AsrFacade</td><td>业务唯一入口</td><td>向业务暴露 init、createSession、release；识别控制通过 AsrSession 执行 start、stop、cancel。</td></tr>
+              <tr><td>ConfigResolver</td><td>拉取配置并生成快照</td><td>在 init 阶段携带 appName 和可选 userToken 请求后端配置，输出可比较的 AsrConfigSnapshot。</td></tr>
+              <tr><td>ConfigComparator</td><td>决定是否切换</td><td>比较当前生效配置与新配置是否一致。</td></tr>
+              <tr><td>PageSessionGuard</td><td>同页单会话守卫</td><td>禁止同一页面同时存在多个活动识别会话。</td></tr>
+              <tr><td>SessionController</td><td>维护主状态机</td><td>串行化命令、约束生命周期、管理终态收口。</td></tr>
+              <tr><td>AudioSource</td><td>音频采集和分帧</td><td>在业务层已完成权限准备前提下处理音频采集、帧切分与资源释放。</td></tr>
+              <tr><td>ModelAdapter</td><td>统一模型接口</td><td>每个新增模型必须实现该接口。</td></tr>
+              <tr><td>QwenRealtimeAdapter</td><td>首个模型实现</td><td>第一版具体模型适配器。</td></tr>
+              <tr><td>EventMapper</td><td>统一事件映射</td><td>把适配器事件转成统一事件，同时保留 raw 通道。</td></tr>
+              <tr><td>RawEventChannel</td><td>原始事件直返</td><td>原始事件保真输出，不直接驱动主状态机。</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="config" class="section">
+          <h2>3. 配置获取与切换规则</h2>
+          <div class="two-col">
+            <div class="card">
+              <div class="card-title">配置快照字段</div>
+              <ul>
+                <li>appName</li>
+                <li>environment</li>
+                <li>channel</li>
+                <li>providerId</li>
+                <li>modelId</li>
+                <li>apiKey</li>
+                <li>endpoint</li>
+                <li>protocolVersion</li>
+                <li>extra</li>
+                <li>resolvedAt</li>
+                <li>sessionBindingId</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title">配置请求上下文</div>
+              <ul>
+                <li>每次调用 init 时只拉取一次配置。</li>
+                <li>请求至少包含 appName，必要时可带 appVersion、channel、environment。</li>
+                <li>userToken 作为可选字段，仅在需要按用户维度下发配置时传入。</li>
+                <li>配置一致则复用当前适配器和路由配置，不重建模型上下文。</li>
+              </ul>
+            </div>
+          </div>
+          <table style="margin-top: 16px;">
+            <thead>
+              <tr><th>场景</th><th>要求</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>进入页面拿到相同配置</td><td>直接复用，不重建适配器，不影响已有会话状态。</td></tr>
+              <tr><td>进入页面拿到不同配置，且无活动会话</td><td>销毁旧适配器上下文，切换到新配置和新适配器。</td></tr>
+              <tr><td>进入页面拿到不同配置，且有活动会话</td><td>拒绝立即切换；必须等待 stop / cancel / failed 结束后，后续新会话再使用新配置。</td></tr>
+              <tr><td>配置过期或无效</td><td>当前会话若未启动则拒绝进入 Ready；若已启动，按适配器错误收口进入 Failed。</td></tr>
+            </tbody>
+          </table>
+          <div class="note">配置生命周期必须独立于识别会话生命周期。ConfigComparator 只比较 appName、environment、channel、providerId、modelId、apiKey、endpoint、protocolVersion 和 extra 等路由字段；userToken 只有在后端明确按用户维度返回配置时才参与配置判定。resolvedAt 与 sessionBindingId 仅用于运行期观测和会话绑定，不参与是否切换的判定。一次会话绑定一次配置快照；正在运行的会话不会被再次 init 而隐式切换。配置采用长期存储还是短期存储不由 SDK 接口强制规定，但 release 后必须清理运行期持有数据。</div>
+        </section>
+
+        <section id="adapter" class="section">
+          <h2>4. 统一模型接口与适配器</h2>
+          <p class="section-intro">统一模型接口不是统一配置，而是统一调用契约。厂商能力和语义差异由适配器实现层承担。</p>
+          <table>
+            <thead>
+              <tr><th>接口对象</th><th>职责</th><th>实现要求</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>ModelAdapter</td><td>模型适配总接口</td><td>定义 start、sendAudio、stop、cancel、dispose、capabilities、eventStream、rawEventStream。</td></tr>
+              <tr><td>AdapterCapabilities</td><td>适配器能力声明</td><td>由实现层声明 supportsPartial、supportsTimestamp、supportsNoSpeechCompleted 等，不要求业务配置显式携带。</td></tr>
+              <tr><td>AdapterConfigValidator</td><td>配置校验</td><td>验证当前快照是否足以启动该模型。</td></tr>
+              <tr><td>AdapterEventMapper</td><td>事件归一化</td><td>把原始事件映射成 RecognitionPartial、RecognitionFinal、SessionCompleted、SessionCancelled、SessionFailed。</td></tr>
+              <tr><td>AdapterErrorMapper</td><td>错误归一化</td><td>输出最小统一错误分类，同时保留原始错误码和原始载荷。</td></tr>
+            </tbody>
+          </table>
+          <div class="warning-note">统一模型接口不能退化成“所有供应商都有同样字段”的最小公分母。真正需要统一的是生命周期和事件契约；厂商能力差异应由适配器声明，而不是强压到统一配置里。</div>
+        </section>
+
+        <section id="session" class="section">
+          <h2>5. 会话与状态机</h2>
+          <table>
+            <thead>
+              <tr><th>状态</th><th>说明</th><th>允许动作</th><th>退出条件</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Idle</td><td>尚未 init，或已经 release。</td><td>init</td><td>进入 ConfigLoading 或 Failed</td></tr>
+              <tr><td>ConfigLoading</td><td>正在获取并比较配置。</td><td>cancel</td><td>进入 Ready、Failed 或 Idle</td></tr>
+              <tr><td>Ready</td><td>配置与适配器已确定，可创建会话。</td><td>createSession, release</td><td>进入 Preparing 或 Idle</td></tr>
+              <tr><td>Preparing</td><td>校验业务层是否已完成权限前置条件、初始化音频、建立模型连接。</td><td>cancel</td><td>进入 Streaming、Cancelled、Failed 或 Idle</td></tr>
+              <tr><td>Streaming</td><td>持续送音频并接收 partial 和 raw 事件。</td><td>stop, cancel</td><td>进入 Stopping、Cancelled、Failed 或 Idle</td></tr>
+              <tr><td>Stopping</td><td>停止送音，等待 final / completed 收尾。</td><td>cancel</td><td>进入 Completed、Cancelled、Failed 或 Idle</td></tr>
+              <tr><td>Completed</td><td>正常完成终态。</td><td>release</td><td>进入 Idle</td></tr>
+              <tr><td>Cancelled</td><td>主动取消终态。</td><td>release</td><td>进入 Idle</td></tr>
+              <tr><td>Failed</td><td>异常结束终态。</td><td>release</td><td>进入 Idle</td></tr>
+            </tbody>
+          </table>
+          <div class="note">同一页面不允许并行多个识别会话。Ready、Preparing、Streaming、Stopping 任一阶段再次 start，都必须被 PageSessionGuard 拒绝。会话进入 Completed、Cancelled、Failed 任一终态后，音频采集、连接和会话级监听都必须立即释放；release 负责清理 SDK 级运行期配置和可复用状态。</div>
+        </section>
+
+        <section id="events" class="section">
+          <h2>6. 事件与错误模型</h2>
+          <div class="three-col">
+            <div class="card">
+              <div class="card-title">统一事件通道</div>
+              <ul>
+                <li>SessionStateChanged</li>
+                <li>RecognitionPartial</li>
+                <li>RecognitionFinal</li>
+                <li>SessionCompleted</li>
+                <li>SessionCancelled</li>
+                <li>SessionFailed</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title">原始事件通道</div>
+              <ul>
+                <li>ProviderRawEvent</li>
+                <li>ProviderRawError</li>
+                <li>RawPayload</li>
+                <li>RequestId</li>
+                <li>SessionId</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title">统一错误最小分类</div>
+              <ul>
+                <li>ConfigError</li>
+                <li>PermissionError</li>
+                <li>AudioError</li>
+                <li>TransportError</li>
+                <li>ProviderError</li>
+                <li>StateError</li>
+              </ul>
+            </div>
+          </div>
+          <table style="margin-top: 16px;">
+            <thead>
+              <tr><th>规则</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>统一状态机唯一权威</td><td>业务侧主逻辑必须依赖统一状态和统一终态事件，而不是直接消费原始事件判断业务流程。</td></tr>
+              <tr><td>权限职责边界</td><td>业务层负责权限检查与申请；SDK 不主动申请权限，只在录音初始化失败时以 PermissionError 或 Failed 终态返回。</td></tr>
+              <tr><td>原始事件保真输出</td><td>适配器必须原样保留供应商原始 errorCode、errorMessage、payload、requestId。</td></tr>
+              <tr><td>终态唯一性</td><td>一次会话只能有一个统一终态事件：Completed、Cancelled 或 Failed 三者只能出现一个。</td></tr>
+              <tr><td>stop 收尾顺序</td><td>正常 stop 路径下，必须先输出 RecognitionFinal，再输出 SessionCompleted；若本次会话没有可提交文本，则允许仅输出带 no-speech 原因的 SessionCompleted。</td></tr>
+              <tr><td>cancel 规则</td><td>cancel 后只允许输出 SessionCancelled，不再产出 final 或 completed。</td></tr>
+              <tr><td>终态资源释放</td><td>会话进入 Completed、Cancelled、Failed 后，必须立即释放音频、传输连接和会话级监听；release 仅负责继续清理 SDK 级运行期配置与内部缓存。</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="security" class="section">
+          <h2>7. 安全前提与边界</h2>
+          <table>
+            <thead>
+              <tr><th>项</th><th>要求</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>密钥管理</td><td>apiKey 仍由后端统一管理、下发、吊销和轮换；Flutter 端只在 init 成功后的运行期消费配置，不应把密钥长期持久化到业务存储。release 后必须清理运行期持有配置。</td></tr>
+              <tr><td>风险定性</td><td>“后端向 Flutter 返回长期 apiKey”属于当前业务约束下的高风险折中，只能视为阶段性实现前提，不能视为长期推荐安全基线。</td></tr>
+              <tr><td>配置边界</td><td>配置接口至少带 appName，必要时可带环境、渠道等上下文；userToken 仅在需要按用户维度下发配置时作为可选字段传入。</td></tr>
+              <tr><td>日志要求</td><td>诊断日志和原始事件默认脱敏，不直接输出完整 apiKey、完整鉴权头和可复用敏感载荷。</td></tr>
+            </tbody>
+          </table>
+          <div class="note">方案 B 的安全语义必须同时成立：一方面，后端统一管理密钥使泄露后可以快速吊销和轮换；另一方面，长期 apiKey 进入客户端仍会扩大暴露面，因此不能把“可吊销”误解成“低风险”。</div>
+        </section>
+
+        <section id="first-model" class="section">
+          <h2>8. 第一版首模型要求</h2>
+          <div class="two-col">
+            <div class="card">
+              <div class="card-title">Qwen3-ASR-Flash-Realtime 接入要求</div>
+              <ul>
+                <li>作为首个真实 ModelAdapter 落地。</li>
+                <li>必须走统一会话内核，不允许业务直接调用模型私有 API。</li>
+                <li>必须产出 raw event 和统一事件双通道。</li>
+                <li>必须验证 stop / cancel / failed 三条主收口路径。</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title">防止首模型绑死架构</div>
+              <ul>
+                <li>先定义 provider-neutral contract，再实现 Qwen 适配器。</li>
+                <li>至少保留一个 FakeAdapter 作为契约测试基线。</li>
+                <li>公共接口不得泄漏 Qwen 私有字段。</li>
+                <li>公共状态机不得依赖 Qwen 私有事件顺序。</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="testing" class="section">
+          <h2>9. 测试与验收</h2>
+          <table>
+            <thead>
+              <tr><th>测试层级</th><th>覆盖重点</th><th>验收要点</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>单元测试</td><td>配置比较、PageSessionGuard、状态机、事件映射、错误映射。</td><td>配置相同不切换、不同才切换；终态唯一；重复 start 被拒绝。</td></tr>
+              <tr><td>集成测试</td><td>Qwen 适配器、init / release、音频采集、实时发送、stop / cancel / failed 收口，以及不同 appName 上下文下的配置返回。</td><td>一条完整链路可稳定输出 partial、final、completed，cancel 不再输出 final。</td></tr>
+              <tr><td>真机测试</td><td>业务层权限编排、前后台切换、来电打断、弱网、页面退出重进。</td><td>页面重进后配置逻辑稳定，活动会话不会被热切换。</td></tr>
+            </tbody>
+          </table>
+          <div class="three-col" style="margin-top: 16px;">
+            <div class="card">
+              <div class="card-title">必须验证的切换场景</div>
+              <ul>
+                <li>配置相同复用旧配置。</li>
+                <li>不同 appName 上下文返回不同配置时能正确切换。</li>
+                <li>配置变化但页面无活动会话时完成切换。</li>
+                <li>配置变化且有活动会话时拒绝热切换。</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title">必须验证的会话场景</div>
+              <ul>
+                <li>正常 start 到 stop 闭环。</li>
+                <li>cancel 立即结束。</li>
+                <li>网络断开进入 Failed。</li>
+                <li>userToken 缺失时，若后端配置策略只按 appName 维度工作，仍能完成正常闭环。</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="card-title">必须验证的原始事件场景</div>
+              <ul>
+                <li>原始错误码和消息未丢失。</li>
+                <li>统一事件和 raw 事件顺序可预测。</li>
+                <li>终态不重复派发。</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="diagram-config" class="section">
+          <h2>10. 配置切换时序图</h2>
+          <p class="section-intro">该图描述业务层调用 init 后，SDK 如何请求配置、比较配置、决定复用还是切换，并保证活动会话不会被热切换。</p>
+          <div class="sequence">
+            <svg viewBox="0 0 1220 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="配置切换时序图">
+              <defs>
+                <marker id="arrow1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#155eef"/></marker>
+                <marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#5f6b7a"/></marker>
+                <marker id="arrow3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#b42318"/></marker>
+              </defs>
+              <rect x="0" y="0" width="1220" height="620" rx="18" fill="#ffffff"/>
+              <g font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="14" fill="#1f2937" text-anchor="middle">
+                <rect x="60" y="24" width="130" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="125" y="49">业务页面</text>
+                <rect x="280" y="24" width="150" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="355" y="49">ConfigResolver</text>
+                <rect x="520" y="24" width="160" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="600" y="49">ConfigComparator</text>
+                <rect x="780" y="24" width="160" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="860" y="49">PageSessionGuard</text>
+                <rect x="1030" y="24" width="120" height="40" rx="10" fill="#fff6eb" stroke="#f5d8ae"/><text x="1090" y="49">后端</text>
+              </g>
+              <g stroke="#c7d0dc" stroke-dasharray="6 6">
+                <line x1="125" y1="76" x2="125" y2="580"/>
+                <line x1="355" y1="76" x2="355" y2="580"/>
+                <line x1="600" y1="76" x2="600" y2="580"/>
+                <line x1="860" y1="76" x2="860" y2="580"/>
+                <line x1="1090" y1="76" x2="1090" y2="580"/>
+              </g>
+              <g font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="13" fill="#1f2937">
+                <line x1="125" y1="120" x2="355" y2="120" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow1)"/><text x="240" y="112" text-anchor="middle">1. init(appName, userToken?)</text>
+                <line x1="355" y1="160" x2="1090" y2="160" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow1)"/><text x="722" y="152" text-anchor="middle">2. 请求配置</text>
+                <line x1="1090" y1="200" x2="355" y2="200" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow2)"/><text x="722" y="192" text-anchor="middle">3. 返回配置快照</text>
+                <line x1="355" y1="240" x2="600" y2="240" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow1)"/><text x="478" y="232" text-anchor="middle">4. 比较新旧配置</text>
+                <line x1="600" y1="280" x2="860" y2="280" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow1)"/><text x="730" y="272" text-anchor="middle">5. 检查是否有活动会话</text>
+                <line x1="860" y1="340" x2="600" y2="340" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow2)"/><text x="730" y="332" text-anchor="middle">6. 无会话：允许切换</text>
+                <line x1="860" y1="400" x2="600" y2="400" stroke="#b42318" stroke-width="2.2" marker-end="url(#arrow3)"/><text x="730" y="392" text-anchor="middle" fill="#b42318">7. 有会话：拒绝热切换</text>
+                <line x1="600" y1="460" x2="355" y2="460" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow2)"/><text x="478" y="452" text-anchor="middle">8. 输出复用或切换结果</text>
+                <line x1="355" y1="520" x2="125" y2="520" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow2)"/><text x="240" y="512" text-anchor="middle">9. 页面进入 Ready</text>
+              </g>
+            </svg>
+          </div>
+        </section>
+
+        <section id="diagram-main" class="section">
+          <h2>11. 标准识别时序图</h2>
+          <p class="section-intro">该图描述标准实时识别闭环，从创建会话到 stop 收尾，再到最终完成。</p>
+          <div class="sequence">
+            <svg viewBox="0 0 1220 760" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="标准识别时序图">
+              <defs>
+                <marker id="arrow4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#155eef"/></marker>
+                <marker id="arrow5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#5f6b7a"/></marker>
+              </defs>
+              <rect x="0" y="0" width="1220" height="760" rx="18" fill="#ffffff"/>
+              <g font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="14" fill="#1f2937" text-anchor="middle">
+                <rect x="50" y="24" width="120" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="110" y="49">业务页面</text>
+                <rect x="240" y="24" width="160" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="320" y="49">SessionController</text>
+                <rect x="470" y="24" width="140" height="40" rx="10" fill="#eefbf3" stroke="#cae9d6"/><text x="540" y="49">AudioSource</text>
+                <rect x="680" y="24" width="150" height="40" rx="10" fill="#eefbf3" stroke="#cae9d6"/><text x="755" y="49">Qwen Adapter</text>
+                <rect x="910" y="24" width="120" height="40" rx="10" fill="#eefbf3" stroke="#cae9d6"/><text x="970" y="49">RawEvent</text>
+                <rect x="1070" y="24" width="90" height="40" rx="10" fill="#fff6eb" stroke="#f5d8ae"/><text x="1115" y="49">模型端</text>
+              </g>
+              <g stroke="#c7d0dc" stroke-dasharray="6 6">
+                <line x1="110" y1="76" x2="110" y2="720"/>
+                <line x1="320" y1="76" x2="320" y2="720"/>
+                <line x1="540" y1="76" x2="540" y2="720"/>
+                <line x1="755" y1="76" x2="755" y2="720"/>
+                <line x1="970" y1="76" x2="970" y2="720"/>
+                <line x1="1115" y1="76" x2="1115" y2="720"/>
+              </g>
+              <g font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="13" fill="#1f2937">
+                <line x1="110" y1="120" x2="320" y2="120" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow4)"/><text x="215" y="112" text-anchor="middle">1. start()</text>
+                <line x1="320" y1="170" x2="540" y2="170" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow4)"/><text x="430" y="162" text-anchor="middle">2. 准备录音并校验权限前置条件</text>
+                <line x1="320" y1="220" x2="755" y2="220" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow4)"/><text x="537" y="212" text-anchor="middle">3. 建立模型会话</text>
+                <line x1="540" y1="290" x2="755" y2="290" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow5)"/><text x="647" y="282" text-anchor="middle">4. 持续输出音频帧</text>
+                <line x1="755" y1="330" x2="1115" y2="330" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow4)"/><text x="935" y="322" text-anchor="middle">5. 发送实时音频</text>
+                <line x1="1115" y1="390" x2="970" y2="390" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow5)"/><text x="1042" y="382" text-anchor="middle">6. raw event</text>
+                <line x1="755" y1="430" x2="320" y2="430" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow5)"/><text x="537" y="422" text-anchor="middle">7. 规范化 partial / final</text>
+                <line x1="320" y1="470" x2="110" y2="470" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow5)"/><text x="215" y="462" text-anchor="middle">8. 向业务派发统一事件</text>
+                <line x1="110" y1="540" x2="320" y2="540" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow4)"/><text x="215" y="532" text-anchor="middle">9. stop()</text>
+                <line x1="320" y1="580" x2="540" y2="580" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow4)"/><text x="430" y="572" text-anchor="middle">10. 停止本地采集</text>
+                <line x1="320" y1="620" x2="755" y2="620" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow4)"/><text x="537" y="612" text-anchor="middle">11. 进入 Stopping</text>
+                <line x1="1115" y1="680" x2="755" y2="680" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow5)"/><text x="935" y="672" text-anchor="middle">12. 返回 final / completed</text>
+                <line x1="755" y1="720" x2="320" y2="720" stroke="#5f6b7a" stroke-width="2.2" marker-end="url(#arrow5)"/><text x="537" y="712" text-anchor="middle">13. 上送统一终态事件</text>
+              </g>
+            </svg>
+          </div>
+        </section>
+
+        <section id="diagram-failure" class="section">
+          <h2>12. 异常收口时序图</h2>
+          <p class="section-intro">该图描述识别过程中网络异常或模型端异常时的失败收口，不承诺无缝续识别。</p>
+          <div class="sequence">
+            <svg viewBox="0 0 1160 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="异常收口时序图">
+              <defs>
+                <marker id="arrow6" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#155eef"/></marker>
+                <marker id="arrow7" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L8,3 L0,6 Z" fill="#b42318"/></marker>
+              </defs>
+              <rect x="0" y="0" width="1160" height="520" rx="18" fill="#ffffff"/>
+              <g font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="14" fill="#1f2937" text-anchor="middle">
+                <rect x="80" y="24" width="140" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="150" y="49">业务页面</text>
+                <rect x="340" y="24" width="180" height="40" rx="10" fill="#edf3ff" stroke="#c9dafd"/><text x="430" y="49">SessionController</text>
+                <rect x="640" y="24" width="150" height="40" rx="10" fill="#eefbf3" stroke="#cae9d6"/><text x="715" y="49">Qwen Adapter</text>
+                <rect x="900" y="24" width="150" height="40" rx="10" fill="#eefbf3" stroke="#cae9d6"/><text x="975" y="49">RawEventChannel</text>
+              </g>
+              <g stroke="#c7d0dc" stroke-dasharray="6 6">
+                <line x1="150" y1="76" x2="150" y2="480"/>
+                <line x1="430" y1="76" x2="430" y2="480"/>
+                <line x1="715" y1="76" x2="715" y2="480"/>
+                <line x1="975" y1="76" x2="975" y2="480"/>
+              </g>
+              <g font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="13" fill="#1f2937">
+                <line x1="430" y1="130" x2="715" y2="130" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow6)"/><text x="572" y="122" text-anchor="middle">1. Streaming 中持续识别</text>
+                <line x1="715" y1="210" x2="975" y2="210" stroke="#b42318" stroke-width="2.2" marker-end="url(#arrow7)"/><text x="845" y="202" text-anchor="middle" fill="#b42318">2. raw error / raw close</text>
+                <line x1="715" y1="280" x2="430" y2="280" stroke="#b42318" stroke-width="2.2" marker-end="url(#arrow7)"/><text x="572" y="272" text-anchor="middle" fill="#b42318">3. 映射为 SessionFailed</text>
+                <line x1="430" y1="340" x2="150" y2="340" stroke="#b42318" stroke-width="2.2" marker-end="url(#arrow7)"/><text x="290" y="332" text-anchor="middle" fill="#b42318">4. 输出统一失败事件</text>
+                <line x1="430" y1="410" x2="150" y2="410" stroke="#155eef" stroke-width="2.2" marker-end="url(#arrow6)"/><text x="290" y="402" text-anchor="middle">5. 若需重试，重新创建新会话</text>
+              </g>
+            </svg>
+          </div>
+          <div class="note">失败收口原则：网络断开、服务端关闭、握手失败、配置非法、适配器校验失败都必须结束当前会话；业务若需重试，必须重新创建会话，不能把旧会话隐式续接到新模型。</div>
+        </section>
+      </main>
+    </div>
+
+    <div class="footer">方案 B · 客户端适配器实时 ASR 需求规格</div>
+  </div>
+</body>
+</html>

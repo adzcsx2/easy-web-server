@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flutter 实时 ASR 方案</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --line: #d9dee7;
+      --text: #1f2937;
+      --muted: #5f6b7a;
+      --primary: #155eef;
+      --primary-soft: #e8f0ff;
+      --success: #067647;
+      --success-soft: #eefbf3;
+      --warning: #b54708;
+      --danger: #b42318;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background: linear-gradient(180deg, #eef2f7 0%, var(--bg) 260px, var(--bg) 100%);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text);
+    }
+
+    .logo-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .header-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Page ── */
+    .page {
+      max-width: 1100px;
+      width: calc(100vw - 48px);
+      margin: 0 auto;
+      padding: 48px 0 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .hero h1 {
+      font-size: 40px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 50%, var(--success) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-desc {
+      color: var(--muted);
+      font-size: 17px;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ── Cards Grid ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 24px;
+      margin-bottom: 48px;
+    }
+
+    .solution-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .solution-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+    }
+
+    .solution-card.card-a::before {
+      background: linear-gradient(90deg, var(--primary), #3b82f6);
+    }
+
+    .solution-card.card-b::before {
+      background: linear-gradient(90deg, var(--success), #10b981);
+    }
+
+    .solution-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 40px rgba(15, 23, 42, 0.1);
+    }
+
+    .card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      width: fit-content;
+      margin-bottom: 18px;
+    }
+
+    .card-a .card-badge {
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid #cddcff;
+    }
+
+    .card-b .card-badge {
+      background: var(--success-soft);
+      color: var(--success);
+      border: 1px solid #c6ead8;
+    }
+
+    .solution-card h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      line-height: 1.3;
+    }
+
+    .solution-card .desc {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 20px;
+      line-height: 1.7;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .chip {
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+
+    .chip.scope {
+      color: var(--primary);
+      background: var(--primary-soft);
+      border-color: #cddcff;
+    }
+
+    .chip.goal {
+      color: var(--success);
+      background: #eafaf1;
+      border-color: #c6ead8;
+    }
+
+    .chip.warn {
+      color: var(--warning);
+      background: #fff4e5;
+      border-color: #f7dab0;
+    }
+
+    .chip.limit {
+      color: var(--muted);
+      background: #f3f5f8;
+      border-color: #d9dee7;
+    }
+
+    .features {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 28px;
+      flex: 1;
+    }
+
+    .features li {
+      padding: 6px 0 6px 20px;
+      position: relative;
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .features li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 13px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .card-a .features li::before {
+      background: var(--primary);
+    }
+
+    .card-b .features li::before {
+      background: var(--success);
+    }
+
+    .card-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+    }
+
+    .card-action-label {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #1249cc;
+    }
+
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .btn-success:hover {
+      background: #055f3c;
+    }
+
+    .btn .arrow {
+      transition: transform 0.15s ease;
+    }
+
+    .btn:hover .arrow {
+      transform: translateX(3px);
+    }
+
+    /* ── Comparison ── */
+    .comparison {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 28px 32px;
+      margin-bottom: 48px;
+    }
+
+    .comparison h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 16px;
+    }
+
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      table-layout: fixed;
+    }
+
+    .compare-table th,
+    .compare-table td {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      vertical-align: top;
+    }
+
+    .compare-table th,
+    .compare-table td {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .compare-table th:first-child,
+    .compare-table td:first-child {
+      width: 14%;
+    }
+
+    .compare-table th:nth-child(2),
+    .compare-table td:nth-child(2),
+    .compare-table th:nth-child(3),
+    .compare-table td:nth-child(3) {
+      width: 43%;
+    }
+
+    .compare-table th {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .compare-table th:first-child,
+    .compare-table td:first-child {
+      padding-left: 0;
+    }
+
+    .compare-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .compare-table td:nth-child(2) {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .compare-table td:nth-child(3) {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    .compare-table .row-highlight-green td {
+      background: #eafaf1;
+    }
+
+    .compare-table .row-highlight-red td {
+      background: #fff0f0;
+    }
+
+    .compare-table .row-highlight-green td:first-child {
+      color: #16a34a;
+      font-weight: 700;
+    }
+
+    .compare-table .row-highlight-red td:first-child {
+      color: #dc2626;
+      font-weight: 700;
+    }
+
+    mark {
+      background: linear-gradient(120deg, #fff3bf 0%, #ffe066 100%);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 8px 0 24px;
+    }
+
+    /* ── Deployment Section ── */
+    .deployment {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 28px 32px;
+      margin-bottom: 48px;
+    }
+
+    .deployment h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+
+    .deployment .section-intro {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 20px;
+    }
+
+    .deploy-sub {
+      margin-bottom: 28px;
+    }
+
+    .deploy-sub:last-child {
+      margin-bottom: 0;
+    }
+
+    .deploy-sub h4 {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: var(--text);
+    }
+
+    .deploy-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .deploy-col {
+      min-width: 0;
+    }
+
+    .deploy-col-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .deploy-col-title.blue {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .deploy-col-title.green {
+      background: var(--success-soft);
+      color: var(--success);
+    }
+
+    .pkg-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 12px;
+    }
+
+    .pkg-list li {
+      padding: 6px 0 6px 16px;
+      position: relative;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .pkg-list li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 13px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--line);
+    }
+
+    .pkg-list li code {
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: "SF Mono", "Fira Code", "Menlo", monospace;
+      font-size: 12px;
+    }
+
+    .code-block {
+      background: #f8f9fb;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 16px 20px;
+      font-family: "SF Mono", "Fira Code", "Menlo", monospace;
+      font-size: 12.5px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      color: var(--text);
+      margin-top: 8px;
+    }
+
+    .code-block .comment {
+      color: var(--muted);
+    }
+
+    .code-block .keyword {
+      color: var(--primary);
+    }
+
+    .code-block .string {
+      color: var(--success);
+    }
+
+    .note-box {
+      background: #f8fbff;
+      border: 1px solid #d8e7ff;
+      color: #1d3a72;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 16px;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .warn-box {
+      background: #fff7eb;
+      border: 1px solid #f3d3a4;
+      color: #7a4611;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 16px;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .config-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-bottom: 16px;
+      table-layout: fixed;
+    }
+
+    .config-table th,
+    .config-table td {
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      vertical-align: top;
+    }
+
+    .config-table th,
+    .config-table td {
+      text-align: left;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .config-table th:first-child,
+    .config-table td:first-child {
+      width: 14%;
+    }
+
+    .config-table th:nth-child(2),
+    .config-table td:nth-child(2),
+    .config-table th:nth-child(3),
+    .config-table td:nth-child(3) {
+      width: 43%;
+    }
+
+    .config-table th {
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .config-table th:first-child,
+    .config-table td:first-child {
+      padding-left: 0;
+    }
+
+    .config-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .config-table td:nth-child(2) {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .config-table td:nth-child(3) {
+      color: var(--success);
+      font-weight: 600;
+    }
+
+    @media (max-width: 760px) {
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .deploy-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 {
+        font-size: 28px;
+      }
+
+      .hero-desc {
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="header-logo" href="index.html">
+        <div class="logo-icon">A</div>
+        <span class="header-title">Flutter 实时 ASR 方案</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="page">
+    <div class="hero">
+      <h1><span>Flutter 实时 ASR 方案</span></h1>
+      <p class="hero-desc">两套实时语音识别架构方案，分别采用后端中转和客户端适配器两种模式，均面向 Android / iOS 平台的 Flutter 实时流式识别场景。</p>
+    </div>
+
+    <div class="cards">
+      <!-- 方案 A -->
+      <a href="flutter_realtime_asr_overview.html" class="solution-card card-a" style="text-decoration:none;color:inherit;">
+        <div class="card-badge">方案 A</div>
+        <h2>后端中转实时 ASR</h2>
+        <p class="desc">Flutter 客户端连接统一后端 WebSocket 协议，模型和供应商切换在服务端完成。SDK 可被多个 App 复用，业务层调用 init 传入 appName 和可选 userToken 后，由 SDK 请求配置接口拿到当前运行期配置；客户端不持有供应商 API Key。</p>
+        <div class="chips">
+          <span class="chip scope">Android / iOS</span>
+          <span class="chip goal">实时流识别闭环</span>
+          <span class="chip limit">后端统一协议</span>
+        </div>
+        <ul class="features">
+          <li>统一接入入口，init / createSession / release</li>
+          <li>本地音频采集与分帧</li>
+          <li>WebSocket 实时会话连接</li>
+          <li>客户端状态机管理</li>
+          <li>统一事件输出与扩展能力</li>
+        </ul>
+        <div class="card-action">
+          <span class="card-action-label">后端承担模型适配与密钥管理</span>
+          <span class="btn btn-primary">查看方案 <span class="arrow">&rarr;</span></span>
+        </div>
+      </a>
+
+      <!-- 方案 B -->
+      <a href="flutter_heavy_asr_overview.html" class="solution-card card-b" style="text-decoration:none;color:inherit;">
+        <div class="card-badge">方案 B</div>
+        <h2>客户端适配器实时 ASR</h2>
+        <p class="desc">Flutter SDK 持有统一会话内核和多模型适配器。SDK 可被多个 App 复用，业务层调用 init 传入 appName 和可选 userToken 后，由 SDK 请求配置接口获取模型、apiKey 和其他运行期配置，并按配置选择适配器。</p>
+        <div class="chips">
+          <span class="chip scope">Android / iOS</span>
+          <span class="chip goal">多供应商并存</span>
+          <span class="chip limit">SDK 内切模型</span>
+        </div>
+        <ul class="features">
+          <li>SDK 在 init 阶段请求并消费服务端模型配置</li>
+          <li>统一模型适配器接口</li>
+          <li>单页单会话管理</li>
+          <li>原始事件通道与诊断能力</li>
+          <li>按适配器契约迭代接入新模型</li>
+        </ul>
+        <div class="card-action">
+          <span class="card-action-label">客户端承担协议适配与状态管理</span>
+          <span class="btn btn-success">查看方案 <span class="arrow">&rarr;</span></span>
+        </div>
+      </a>
+    </div>
+
+    <div class="comparison">
+      <h3>方案对比</h3>
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>方案 A · 后端中转</th>
+            <th>方案 B · 客户端适配器</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>模型逻辑位置</td>
+            <td>后端统一处理</td>
+            <td>客户端适配器实现</td>
+          </tr>
+          <tr>
+            <td>鉴权方式</td>
+            <td>后端持有，客户端不可见</td>
+            <td>前端消费后端下发的模型配置和 apiKey，由后端统一管理密钥，泄露时服务端直接吊销更换</td>
+          </tr>
+          <tr>
+            <td>新增供应商</td>
+            <td>只需更新后端</td>
+            <td>需新增客户端适配器</td>
+          </tr>
+          <tr>
+            <td>配置来源</td>
+            <td>后端根据 app 参数解析路由与会话参数</td>
+            <td>后端根据 appName 和可选 userToken 下发模型配置</td>
+          </tr>
+          <tr>
+            <td>客户端复杂度</td>
+            <td>较低</td>
+            <td>较高</td>
+          </tr>
+          <tr>
+            <td>协议灵活性</td>
+            <td>依赖后端协议版本</td>
+            <td>客户端可适配多种协议</td>
+          </tr>
+          <tr>
+            <td>token 计算</td>
+            <td>1. 可为不同 App 分配独立 apiKey，通过服务商的 apiKey 粒度 token 消耗统计实现按 App 计量。<br>2. 可在实际调用链路中记录供应商返回的 usage 字段、结束事件或账单明细；即使供应商没有”已消耗 token 查询接口”，也仍可基于服务端请求响应日志、会话结束回包、账单导出或官方计费规则估算。</td>
+            <td>可为不同 App 分配独立 apiKey，通过服务商的 apiKey 粒度 token 消耗统计实现按 App 计量。</td>
+          </tr>
+          <tr class="row-highlight-green">
+            <td>优点</td>
+            <td>客户端接入面更稳定，密钥不出后端，新增供应商通常只改后端；统一审计、限流、计费和问题排查口径更容易收敛；token 统计具备实时链路日志，准确性和实时性更优。</td>
+            <td>更接近供应商原生能力，试新模型和做差异化能力验证更直接；部分高级特性不必先经过后端协议抽象才能落地。</td>
+          </tr>
+          <tr class="row-highlight-red">
+            <td>缺点</td>
+            <td>后端需要承担实时中转、协议适配、扩缩容和高并发稳定性，服务端建设与运维成本更高。由于增加了一层中间转发与考虑并发压力,稳定性和延迟性上不如方案B</td>
+            <td>客户端复杂度、发版成本和跨端一致性压力更高；新增供应商通常要补 SDK 适配器，且密钥与配置暴露面更大；token 统计只能依赖服务商账单做事后统计，缺乏实时链路日志。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="deployment">
+      <h3>部署与接入</h3>
+      <p class="section-intro">库开发完成后，统一发布到 Gitee 私有仓库，业务方通过 pubspec.yaml 中的 git 依赖方式引入。以下是两种方案的发布结构、配置方式和接入示例。</p>
+
+      <!-- 发布结构 -->
+      <div class="deploy-sub">
+        <h4>发布结构</h4>
+        <div class="deploy-grid">
+          <div class="deploy-col">
+            <div class="deploy-col-title blue">方案 A · 单库结构</div>
+            <ul class="pkg-list">
+              <li><code>asr_flutter</code> — 统一 Flutter SDK：对外暴露 AsrClient、AsrSession、事件模型与音频采集能力</li>
+              <li>内部按模块划分状态机、传输层、音频采集与测试夹具，但不要求业务方感知内部拆分</li>
+            </ul>
+          </div>
+          <div class="deploy-col">
+            <div class="deploy-col-title green">方案 B · 单包结构</div>
+            <ul class="pkg-list">
+              <li><code>asr_client</code> — 统一客户端 SDK：AsrFacade、ConfigResolver、SessionController、ModelAdapter 及适配器实现</li>
+            </ul>
+          </div>
+        </div>
+        <div class="note-box">两种方案均以 Gitee 私有仓库为唯一发布源，业务方通过 pubspec.yaml 中的 git 依赖引入，不要复制源码到业务工程中。同一个 SDK 可供多个 App 复用，业务层在调用语音能力前应先调用 SDK 的 init，并传入 appName、环境、渠道等上下文以及可选 userToken；SDK 再请求配置接口获取当前运行期配置。配置长期存储还是短期存储不由 SDK 接口强制规定，但 release 后必须清理运行期持有的配置和资源。</div>
+      </div>
+
+      <!-- 发布方式 -->
+      <div class="deploy-sub">
+        <h4>发布方式</h4>
+        <table class="config-table">
+          <thead>
+            <tr>
+              <th>方式</th>
+              <th>适用场景</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Gitee 私有仓库</td>
+              <td>企业内部 Flutter SDK 发布</td>
+              <td>为仓库打版本 Tag，并在 pubspec.yaml 中通过 <code style="background:#f3f5f8;padding:1px 6px;border-radius:4px;font-size:12px;">git:</code> + <code style="background:#f3f5f8;padding:1px 6px;border-radius:4px;font-size:12px;">ref:</code> 引入</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- pubspec.yaml 示例 -->
+      <div class="deploy-sub">
+        <h4>pubspec.yaml 配置</h4>
+        <div class="deploy-grid">
+          <div class="deploy-col">
+            <div class="deploy-col-title blue">方案 A · 单包依赖</div>
+            <div class="code-block"><span class="keyword">dependencies:</span>
+  <span class="string">asr_flutter:</span>
+    <span class="keyword">git:</span>
+      <span class="keyword">url:</span> <span class="string">https://gitee.com/your-org/asr_flutter.git</span>
+      <span class="keyword">ref:</span> <span class="string">v1.0.0</span></div>
+          </div>
+          <div class="deploy-col">
+            <div class="deploy-col-title green">方案 B · 单包依赖</div>
+            <div class="code-block"><span class="keyword">dependencies:</span>
+  <span class="string">asr_client:</span>
+    <span class="keyword">git:</span>
+      <span class="keyword">url:</span> <span class="string">https://gitee.com/your-org/asr_client.git</span>
+      <span class="keyword">ref:</span> <span class="string">v1.0.0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 导入与使用 -->
+      <div class="deploy-sub">
+        <h4>导入与使用</h4>
+        <div class="deploy-grid">
+          <div class="deploy-col">
+            <div class="deploy-col-title blue">方案 A · 后端中转</div>
+            <div class="code-block"><span class="keyword">import</span> <span class="string">'package:asr_flutter/asr_flutter.dart'</span>;
+
+<span class="comment">// 1. 业务层先完成麦克风权限检查与申请</span>
+<span class="comment">// await businessPermissionService.ensureMicrophoneGranted();</span>
+
+<span class="comment">// 2. 创建客户端（可复用）</span>
+<span class="keyword">final</span> asrInitParams = AsrInitParams(
+  appName: <span class="string">'news_app'</span>,
+  appVersion: <span class="string">'1.0.0'</span>,
+  channel: <span class="string">'appstore'</span>,
+  environment: <span class="string">'prod'</span>,
+  userToken: currentUserToken, <span class="comment">// 可选：仅在需要按用户维度下发配置时传入</span>
+);
+
+<span class="keyword">final</span> client = AsrClient(
+  configEndpoint: <span class="string">'https://your-backend.example.com/asr/config'</span>,
+);
+
+<span class="comment">// 3. 初始化 SDK，内部请求配置接口并缓存当前运行期配置</span>
+<span class="keyword">await</span> client.init(asrInitParams);
+
+<span class="comment">// 4. 创建识别会话</span>
+<span class="keyword">final</span> session = client.createSession();
+
+<span class="comment">// 5. 监听识别事件</span>
+session.events.listen((event) {
+  <span class="keyword">if</span> (event <span class="keyword">is</span> RecognitionPartial) { <span class="comment">/* 更新 UI */</span> }
+  <span class="keyword">if</span> (event <span class="keyword">is</span> RecognitionFinal)    { <span class="comment">/* 处理结果 */</span> }
+  <span class="keyword">if</span> (event <span class="keyword">is</span> SessionCompleted)    { <span class="comment">/* 会话结束 */</span> }
+});
+
+<span class="comment">// 6. 开始识别</span>
+<span class="keyword">await</span> session.start();
+
+<span class="comment">// 7. 停止识别</span>
+<span class="keyword">await</span> session.stop();
+
+<span class="comment">// 8. 页面退出时释放运行期配置和资源</span>
+<span class="keyword">await</span> client.release();</div>
+          </div>
+          <div class="deploy-col">
+            <div class="deploy-col-title green">方案 B · 客户端适配器</div>
+            <div class="code-block"><span class="keyword">import</span> <span class="string">'package:asr_client/asr_client.dart'</span>;
+
+<span class="comment">// 1. 业务层先完成麦克风权限检查与申请</span>
+<span class="comment">// await businessPermissionService.ensureMicrophoneGranted();</span>
+
+<span class="comment">// 2. 初始化 SDK，配置加载由 SDK 内部消费</span>
+<span class="keyword">final</span> asrInitParams = AsrInitParams(
+  appName: <span class="string">'news_app'</span>,
+  appVersion: <span class="string">'1.0.0'</span>,
+  channel: <span class="string">'appstore'</span>,
+  environment: <span class="string">'prod'</span>,
+  userToken: currentUserToken, <span class="comment">// 可选：仅在需要按用户维度返回配置时传入</span>
+);
+
+<span class="keyword">final</span> facade = AsrFacade(
+  configEndpoint: <span class="string">'https://your-backend.example.com/asr/config'</span>,
+);
+
+<span class="comment">// 3. 页面进入时初始化 SDK，内部请求配置接口并切换适配器</span>
+<span class="keyword">await</span> facade.init(asrInitParams);
+
+<span class="comment">// 4. 创建会话（绑定当前模型配置快照）</span>
+<span class="keyword">final</span> session = facade.createSession();
+
+<span class="comment">// 5. 监听识别事件</span>
+session.events.listen((event) {
+  <span class="keyword">if</span> (event <span class="keyword">is</span> RecognitionPartial)  { <span class="comment">/* 更新 UI */</span> }
+  <span class="keyword">if</span> (event <span class="keyword">is</span> RecognitionFinal)    { <span class="comment">/* 处理结果 */</span> }
+  <span class="keyword">if</span> (event <span class="keyword">is</span> SessionCompleted)    { <span class="comment">/* 会话结束 */</span> }
+});
+
+<span class="comment">// 6. 开始识别</span>
+<span class="keyword">await</span> session.start();
+
+<span class="comment">// 7. 停止识别</span>
+<span class="keyword">await</span> session.stop();
+
+<span class="comment">// 8. 页面退出时释放运行期配置和资源</span>
+<span class="keyword">await</span> facade.release();</div>
+          </div>
+        </div>
+        <div class="note-box">
+          <strong>方案 A：</strong>AsrClient 可长驻复用，但在调用语音能力前业务层必须先调用 init，并传入 appName 与可选 userToken。SDK 内部请求配置接口获取当前运行期配置；createSession 只消费 init 后已生效的配置，release 用于释放这些配置与资源。<br>
+          <strong>方案 B：</strong>AsrFacade 同样通过 init 传入 appName 与可选 userToken，由 SDK 内部请求配置接口并切换适配器，同页只允许一个活动会话，配置变化只影响新会话；release 用于释放运行期配置和适配器资源。
+        </div>
+      </div>
+
+      <!-- 配置差异 -->
+      <div class="deploy-sub">
+        <h4>配置差异</h4>
+        <table class="config-table">
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>方案 A · 后端中转</th>
+              <th>方案 B · 客户端适配器</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>后端连接配置</td>
+              <td>WebSocket endpoint + init 入参 + 会话参数</td>
+              <td>业务侧只依赖 SDK；业务层先调 init，SDK 再按 appName 和可选 userToken 请求并消费服务端模型配置</td>
+            </tr>
+            <tr>
+              <td>鉴权方式</td>
+              <td>客户端不持有，后端管理</td>
+              <td>由 SDK 在 init 阶段请求配置接口获取模型配置和 apiKey 供内部消费，密钥由后端统一管理，泄露时可即时吊销</td>
+            </tr>
+            <tr>
+              <td>模型选择</td>
+              <td>后端侧按 app 参数路由，客户端无感知</td>
+              <td>SDK 内根据服务端按 app 参数返回的配置切换适配器</td>
+            </tr>
+            <tr>
+              <td>用户维度</td>
+              <td>可选在 init 时传入 userToken，由后端决定是否参与会话配置解析</td>
+              <td>业务层可在 init 时传入 userToken，由后端决定是否返回用户级配置</td>
+            </tr>
+            <tr>
+              <td>音频参数</td>
+              <td>通过统一 SDK 配置采样率、帧长</td>
+              <td>通过统一 SDK 的 AudioSource 能力管理</td>
+            </tr>
+            <tr>
+              <td>扩展能力</td>
+              <td>capability 集合 + metadata 透传</td>
+              <td>适配器声明 AdapterCapabilities</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="warn-box">两种方案的接入边界都应保持在统一 SDK 内部完成协议与音频链路管理，业务侧只依赖单一 SDK 接口。麦克风权限检查与申请应由业务层先行完成。调用语音方法前，业务层必须先调用 SDK 的 init，并传入 appName、环境、渠道等上下文以及可选 userToken；SDK 再请求配置接口获取当前运行期配置。配置采用长期存储还是短期存储不由 SDK 接口层强制规定，但 release 后必须清理运行期持有的配置和资源。方案 B 当前仍可能由配置接口返回模型配置和 apiKey 供 SDK 内部消费，密钥由后端统一管理，泄露时可即时吊销，但“后端下发长期 apiKey”仍属于当前业务约束下的高风险折中，不应视为长期推荐安全基线。</div>
+      </div>
+    </div>
+
+    <div class="footer">Flutter 实时 ASR 方案 · 入口页</div>
+  </div>
+</body>
+</html>
