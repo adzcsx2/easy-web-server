@@ -102,13 +102,14 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use((req, res, next) => {
   // Only handle GET requests for paths that look like sub-directory access
   if (req.method !== 'GET') return next();
-  const dirName = req.path.split('/').filter(Boolean)[0];
+  const decodedPath = decodeURIComponent(req.path);
+  const dirName = decodedPath.split('/').filter(Boolean)[0];
   if (!dirName) return next();
   const dirPath = path.join(FILES_ROOT, dirName);
   if (!fs.existsSync(dirPath) || !fs.statSync(dirPath).isDirectory()) return next();
 
   // Redirect /dirname -> /dirname/ so relative paths in HTML resolve correctly
-  const afterDir = req.path.slice(dirName.length + 1);
+  const afterDir = decodedPath.slice(dirName.length + 1);
   if (!afterDir) {
     return res.redirect(301, req.path + '/');
   }
