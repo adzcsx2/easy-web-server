@@ -13,10 +13,19 @@ const os = require('os');
 const PORT = 4000;
 const FILES_ROOT = path.join(__dirname, 'files');
 const PROJECT_ROOT = __dirname;
+const UPLOAD_TEMP_DIR = path.join(__dirname, '.tmp');
 const IGNORE_DIRS = ['node_modules', '.git'];
 const MAX_PROGRESS_ENTRIES = 50;
 const UPLOAD_PROGRESS_CLEANUP_INTERVAL = 60_000; // 1 minute
 const SSE_POLL_INTERVAL = 500; // 500ms
+const MAX_VIEW_FILE_SIZE = 5 * 1024 * 1024; // 5MB - maximum file size for text viewing
+const TEXT_FILE_EXTENSIONS = [
+  'md', 'txt', 'json', 'xml', 'yaml', 'yml', 'js', 'jsx', 'ts', 'tsx',
+  'css', 'scss', 'less', 'html', 'htm', 'py', 'java', 'go', 'rs', 'c',
+  'cpp', 'h', 'hpp', 'sh', 'bash', 'zsh', 'php', 'rb', 'swift', 'kt',
+  'sql', 'csv', 'tsv', 'ini', 'toml', 'conf', 'config', 'log', 'markdown',
+  'rest', 'graphql', 'vue', 'svelte'
+];
 
 // ---------------------------------------------------------------------------
 // Upload progress tracking (shared across all requests / SSE clients)
@@ -31,11 +40,18 @@ function generateUploadId() {
 }
 
 /**
- * Keep only the most recent MAX_PROGRESS_ENTRIES in the map.
+ * Prune stale progress entries: remove entries older than 2 minutes
+ * or entries stuck in non-terminal states for too long.
  */
 function pruneProgressEntries() {
+  const now = Date.now();
+  const maxAge = 2 * 60 * 1000; // 2 minutes
+  for (const [key, entry] of uploadProgress) {
+    if (now - entry.timestamp > maxAge) {
+      uploadProgress.delete(key);
+    }
+  }
   if (uploadProgress.size <= MAX_PROGRESS_ENTRIES) return;
-  // Maps iterate in insertion order – drop oldest entries
   const excess = uploadProgress.size - MAX_PROGRESS_ENTRIES;
   let count = 0;
   for (const key of uploadProgress.keys()) {
@@ -71,6 +87,24 @@ function validatePath(unsafeRelativePath, allowedRoot) {
  */
 function sanitizeFilename(name) {
   return name.replace(/[/\\?%*:|"<>]/g, '_').replace(/\0/g, '');
+}
+
+/**
+ * Check if a file extension is in the text file whitelist.
+ */
+function isTextFileExtension(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  return TEXT_FILE_EXTENSIONS.includes(ext);
+}
+
+/**
+ * Detect if a file is likely binary by checking for null bytes.
+ */
+function isBinaryContent(buffer) {
+  for (let i = 0; i < Math.min(buffer.length, 1024); i++) {
+    if (buffer[i] === 0) return true;
+  }
+  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -221,13 +255,15 @@ app.get('/api/files', (req, res) => {
 
 // --- POST /api/files/upload -----------------------------------------------
 app.post('/api/files/upload', (req, res) => {
-  const uploadId = generateUploadId();
+  // Read uploadId from query params so it's available before multer parses the body
+  const uploadId = req.query.uploadId || generateUploadId();
+  const filename = req.query.filename || '上传中...';
   const totalSize = parseInt(req.headers['content-length'] || '0', 10);
 
-  // Register initial progress
+  // Register progress entry with client-provided ID
   const progressEntry = {
     uploadId,
-    filename: 'batch',
+    filename,
     total: totalSize,
     loaded: 0,
     percent: 0,
@@ -237,9 +273,21 @@ app.post('/api/files/upload', (req, res) => {
   uploadProgress.set(uploadId, progressEntry);
   pruneProgressEntries();
 
+  // Track bytes received to update progress during upload
+  let receivedBytes = 0;
+  req.on('data', (chunk) => {
+    receivedBytes += chunk.length;
+    if (totalSize > 0) {
+      progressEntry.loaded = receivedBytes;
+      progressEntry.percent = Math.round((receivedBytes / totalSize) * 100);
+    }
+  });
+
   // We need to parse targetPath from the multipart body, so multer must run first.
   // Use a two-pass approach: first multer to parse fields, then validate and save.
-  const tempUpload = multer({ limits: { fileSize: 500 * 1024 * 1024, files: 50 } }).array('files', 50);
+  const tempDir = UPLOAD_TEMP_DIR;
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+  const tempUpload = multer({ dest: tempDir, limits: { fileSize: 500 * 1024 * 1024, files: 50 } }).array('files', 50);
 
   tempUpload(req, res, (err) => {
     if (err) {
@@ -247,14 +295,16 @@ app.post('/api/files/upload', (req, res) => {
       progressEntry.status = 'error';
       progressEntry.error = err.message;
       progressEntry.timestamp = Date.now();
+      setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
       if (!res.headersSent) {
-        return res.status(400).json({ error: err.message, uploadId });
+        return res.status(400).json({ error: err.message, uploadId: progressEntry.uploadId });
       }
       return;
     }
 
     // Now req.body is populated by multer
     const targetPath = (req.body && req.body.targetPath) || '';
+
     let resolvedTarget;
     try {
       resolvedTarget = validatePath(targetPath, FILES_ROOT);
@@ -293,10 +343,18 @@ app.post('/api/files/upload', (req, res) => {
 
       const finalDest = path.join(resolvedTarget, finalName);
       try {
-        fs.renameSync(file.path, finalDest);
+        // Use copy+unlink instead of rename to handle cross-device scenarios
+        const src = file.path;
+        if (src) {
+          fs.copyFileSync(src, finalDest);
+          try { fs.unlinkSync(src); } catch (_) {}
+        } else {
+          // Fallback: write from buffer if disk storage didn't set path
+          fs.writeFileSync(finalDest, file.buffer);
+        }
         savedFiles.push({ originalName: file.originalname, savedName: finalName, size: file.size });
-      } catch (renameErr) {
-        console.error('Failed to move uploaded file:', renameErr);
+      } catch (moveErr) {
+        console.error('Failed to move uploaded file:', moveErr);
         // Clean up temp file
         try { fs.unlinkSync(file.path); } catch (_) {}
       }
@@ -308,9 +366,19 @@ app.post('/api/files/upload', (req, res) => {
     progressEntry.fileCount = savedFiles.length;
     progressEntry.timestamp = Date.now();
 
+    // Update filename to show actual uploaded file names
+    if (savedFiles.length === 1) {
+      progressEntry.filename = savedFiles[0].savedName;
+    } else if (savedFiles.length > 1) {
+      progressEntry.filename = savedFiles[0].savedName + ' 等' + savedFiles.length + '个文件';
+    }
+
+    // Remove progress entry after 8 seconds so SSE stops broadcasting it
+    setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
+
     res.json({
       success: true,
-      uploadId,
+      uploadId: progressEntry.uploadId,
       files: savedFiles,
     });
   });
@@ -380,6 +448,53 @@ app.get('/api/files/download', (req, res) => {
     if (err.status === 403) return res.status(403).json({ error: err.message });
     console.error('Error in GET /api/files/download:', err);
     res.status(500).json({ error: 'Download failed' });
+  }
+});
+
+// --- GET /api/files/view ---------------------------------------------------
+app.get('/api/files/view', (req, res) => {
+  try {
+    const relativePath = req.query.path || '';
+    if (!relativePath) {
+      return res.status(400).json({ error: '路径参数不能为空' });
+    }
+
+    const resolved = validatePath(relativePath, FILES_ROOT);
+
+    if (!fs.existsSync(resolved)) {
+      return res.status(404).json({ error: '文件不存在' });
+    }
+
+    const stat = fs.statSync(resolved);
+    if (stat.isDirectory()) {
+      return res.status(400).json({ error: '无法查看目录' });
+    }
+
+    // Check file size limit
+    if (stat.size > MAX_VIEW_FILE_SIZE) {
+      return res.status(413).json({ error: `文件过大，无法查看（最大${MAX_VIEW_FILE_SIZE / 1024 / 1024}MB）` });
+    }
+
+    // Check file extension
+    if (!isTextFileExtension(relativePath)) {
+      return res.status(415).json({ error: '不支持的文件类型' });
+    }
+
+    // Read file content
+    const content = fs.readFileSync(resolved);
+
+    // Binary content detection
+    if (isBinaryContent(content)) {
+      return res.status(415).json({ error: '不支持查看二进制文件' });
+    }
+
+    // Set content type and encoding
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.send(content.toString('utf-8'));
+  } catch (err) {
+    if (err.status === 403) return res.status(403).json({ error: err.message });
+    console.error('Error in GET /api/files/view:', err);
+    res.status(500).json({ error: '读取文件失败' });
   }
 });
 

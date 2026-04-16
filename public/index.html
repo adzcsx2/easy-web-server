@@ -489,6 +489,24 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   text-align: right;
 }
 
+.upload-item-cancel {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: all 0.15s;
+}
+.upload-item-cancel:hover {
+  color: var(--danger);
+  opacity: 1;
+  background: var(--danger-soft);
+}
+
 /* ===== Site Banner ===== */
 .site-banner {
   display: flex;
@@ -726,11 +744,13 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 /* ===== Toast ===== */
 .toast-container {
   position: fixed;
-  top: calc(var(--header-h) + 12px);
-  right: 20px;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 300;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 .toast {
@@ -738,13 +758,13 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-md);
-  padding: 12px 16px;
+  padding: 12px 20px;
   font-size: 0.875rem;
   display: flex;
   align-items: center;
   gap: 8px;
   animation: fadeIn 0.3s ease both;
-  max-width: 360px;
+  white-space: nowrap;
 }
 .toast.toast-success { border-left: 3px solid var(--success); }
 .toast.toast-error { border-left: 3px solid var(--danger); }
@@ -874,9 +894,9 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 let currentPath = '';
 let fileList = [];
 let isCurrentSite = false;
-let myUploads = new Map();
 let globalUploads = new Map();
 let uploadQueue = [];
+let activeXhrs = new Map();  // uploadId -> XMLHttpRequest
 let activeUploads = 0;
 const MAX_CONCURRENT = 5;
 let deleteTarget = null;
@@ -924,6 +944,23 @@ function formatSize(bytes) {
 function formatDate(ts) {
   const d = new Date(ts);
   return d.toLocaleString('zh-CN');
+}
+
+/* ===== Text File Detection ===== */
+function isTextFile(filename) {
+  const ext = filename.split('.').pop().toLowerCase();
+  const textExtensions = [
+    'md', 'txt', 'json', 'xml', 'yaml', 'yml', 'js', 'jsx', 'ts', 'tsx',
+    'css', 'scss', 'less', 'html', 'htm', 'py', 'java', 'go', 'rs', 'c',
+    'cpp', 'h', 'hpp', 'sh', 'bash', 'zsh', 'php', 'rb', 'swift', 'kt',
+    'sql', 'csv', 'tsv', 'ini', 'toml', 'conf', 'config', 'log', 'markdown',
+    'rest', 'graphql', 'vue', 'svelte'
+  ];
+  return textExtensions.includes(ext);
+}
+
+function getFileExtension(filename) {
+  return filename.split('.').pop().toLowerCase();
 }
 
 function getFileIconClass(name, isDir) {
@@ -1004,7 +1041,11 @@ function goBack() {
 
 function initFromURL() {
   const hash = location.hash.replace(/^#\/?/, '');
-  currentPath = hash;
+  try {
+    currentPath = decodeURIComponent(hash);
+  } catch (e) {
+    currentPath = hash;
+  }
 }
 
 window.addEventListener('popstate', () => {
@@ -1089,6 +1130,10 @@ async function loadFiles() {
       if (ext === 'html' || ext === 'htm') {
         const filePath = '/' + (currentPath ? currentPath + '/' : '') + encodeURIComponent(f.name);
         clickAction = `onclick="window.open('${escapeHtml(filePath)}','_blank')"`;
+        rowCls = 'file-row';
+      } else if (isTextFile(f.name)) {
+        const filePath = (currentPath ? currentPath + '/' : '') + f.name;
+        clickAction = `onclick="window.open('/api/files/view?path=${encodeURIComponent(filePath)}','_blank')"`;
         rowCls = 'file-row';
       }
     }
@@ -1257,14 +1302,13 @@ function startUpload(file) {
   activeUploads++;
   const uploadId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
-  myUploads.set(uploadId, {
+  // Create entry immediately so cancel button can find the right ID
+  globalUploads.set(uploadId, {
     id: uploadId,
     name: file.name,
     progress: 0,
     status: 'uploading',
-    mine: true
   });
-
   renderUploadPanel();
 
   const fd = new FormData();
@@ -1272,49 +1316,59 @@ function startUpload(file) {
   fd.append('files', file);
 
   const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/files/upload');
+  xhr.open('POST', '/api/files/upload?uploadId=' + encodeURIComponent(uploadId) + '&filename=' + encodeURIComponent(file.name));
+  activeXhrs.set(uploadId, xhr);
+
+  let lastLoaded = 0;
+  let lastTime = Date.now();
 
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
       const pct = Math.round((e.loaded / e.total) * 100);
-      const info = myUploads.get(uploadId);
+      const now = Date.now();
+      const elapsed = (now - lastTime) / 1000; // seconds
+      const speed = elapsed > 0 ? (e.loaded - lastLoaded) / elapsed : 0;
+      lastLoaded = e.loaded;
+      lastTime = now;
+
+      const info = globalUploads.get(uploadId);
       if (info) {
         info.progress = pct;
-        updateUploadItem(uploadId, pct, 'uploading');
+        info.status = 'uploading';
+        info.speed = speed;
       }
+      updateUploadItem(uploadId, pct, 'uploading', speed);
     }
   };
 
   xhr.onload = () => {
-    const info = myUploads.get(uploadId);
+    activeXhrs.delete(uploadId);
     if (xhr.status >= 200 && xhr.status < 300) {
-      if (info) {
-        info.progress = 100;
-        info.status = 'done';
-      }
-      updateUploadItem(uploadId, 100, 'done');
       showToast(`${file.name} 上传成功`, 'success');
-      scheduleHideUpload(uploadId);
       loadFiles();
       loadFolderTree();
     } else {
-      if (info) {
-        info.status = 'error';
-      }
-      updateUploadItem(uploadId, info ? info.progress : 0, 'error');
       showToast(`${file.name} 上传失败`, 'error');
-      scheduleHideUpload(uploadId);
     }
     activeUploads--;
     processQueue();
   };
 
   xhr.onerror = () => {
-    const info = myUploads.get(uploadId);
-    if (info) info.status = 'error';
-    updateUploadItem(uploadId, info ? info.progress : 0, 'error');
+    activeXhrs.delete(uploadId);
+    if (xhr.__cancelled) return;
     showToast(`${file.name} 上传失败`, 'error');
-    scheduleHideUpload(uploadId);
+    activeUploads--;
+    processQueue();
+  };
+
+  xhr.onabort = () => {
+    activeXhrs.delete(uploadId);
+    hiddenGlobalIds.add(uploadId);  // Prevent SSE from re-adding
+    globalUploads.delete(uploadId);
+    const el = document.getElementById('upload-' + uploadId);
+    if (el) el.remove();
+    renderUploadPanel();
     activeUploads--;
     processQueue();
   };
@@ -1322,7 +1376,25 @@ function startUpload(file) {
   xhr.send(fd);
 }
 
-function updateUploadItem(uploadId, progress, status) {
+function cancelUpload(uploadId) {
+  const xhr = activeXhrs.get(uploadId);
+  if (xhr) {
+    const info = globalUploads.get(uploadId);
+    const name = info ? info.name : '文件';
+    xhr.__cancelled = true;
+    xhr.abort();
+    showToast(`${name} 已取消上传`, 'info');
+  }
+}
+
+function formatSpeed(bytesPerSec) {
+  if (bytesPerSec <= 0) return '';
+  if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + ' B/s';
+  if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
+  return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
+}
+
+function updateUploadItem(uploadId, progress, status, speed) {
   const el = document.getElementById('upload-' + uploadId);
   if (!el) return;
   const bar = el.querySelector('.upload-item-progress-bar');
@@ -1337,13 +1409,15 @@ function updateUploadItem(uploadId, progress, status) {
       (status === 'uploading' ? ' striped' : '');
   }
   if (statusEl) {
-    const statusMap = {
-      uploading: progress + '%',
-      processing: '处理中...',
-      done: '完成',
-      error: '失败'
-    };
-    statusEl.textContent = statusMap[status] || '';
+    let text;
+    if (status === 'uploading') {
+      const speedText = speed != null ? ' ' + formatSpeed(speed) : '';
+      text = progress + '%' + speedText;
+    } else {
+      const statusMap = { processing: '处理中...', done: '完成', error: '失败' };
+      text = statusMap[status] || '';
+    }
+    statusEl.textContent = text;
   }
   if (iconEl) {
     iconEl.className = 'upload-item-icon ' + status;
@@ -1357,14 +1431,19 @@ function updateUploadItem(uploadId, progress, status) {
   }
 }
 
+const hiddenGlobalIds = new Set();
+
 function scheduleHideUpload(uploadId) {
+  if (hiddenGlobalIds.has(uploadId)) return;
+  hiddenGlobalIds.add(uploadId);
+
   setTimeout(() => {
     const el = document.getElementById('upload-' + uploadId);
     if (el) {
       el.classList.add('hiding');
       setTimeout(() => {
         el.remove();
-        myUploads.delete(uploadId);
+        globalUploads.delete(uploadId);
         renderUploadPanel();
       }, 300);
     }
@@ -1376,7 +1455,7 @@ function renderUploadPanel() {
   const list = document.getElementById('uploadList');
   const countEl = document.getElementById('uploadCount');
 
-  const allUploads = [...myUploads.values(), ...globalUploads.values()];
+  const allUploads = [...globalUploads.values()];
   const activeCount = allUploads.filter(u => u.status === 'uploading' || u.status === 'processing').length;
 
   if (allUploads.length === 0) {
@@ -1411,19 +1490,20 @@ function renderUploadPanel() {
       error: '失败'
     };
 
-    const tagHtml = u.mine
-      ? '<span class="tag tag-mine">我的</span>'
-      : '<span class="tag tag-other">其他</span>';
+    const cancelBtn = ((statusClass === 'uploading' || statusClass === 'processing') && activeXhrs.has(id))
+      ? `<button class="upload-item-cancel" onclick="cancelUpload('${id}')" title="取消">&#10005;</button>`
+      : '';
 
     div.innerHTML = `
       <div class="upload-item-icon ${statusClass}">${iconMap[statusClass] || '&#8593;'}</div>
       <div class="upload-item-info">
-        <div class="upload-item-name">${u.name}${tagHtml}</div>
+        <div class="upload-item-name">${u.name}</div>
         <div class="upload-item-progress">
           <div class="upload-item-progress-bar${statusClass === 'uploading' ? ' striped' : ''}${statusClass === 'done' ? ' done' : ''}${statusClass === 'error' ? ' error' : ''}" style="width:${u.progress || 0}%"></div>
         </div>
       </div>
       <div class="upload-item-status">${statusTextMap[statusClass] || ''}</div>
+      ${cancelBtn}
     `;
 
     list.appendChild(div);
@@ -1453,42 +1533,63 @@ function connectSSE() {
 function renderGlobalProgress(data) {
   if (!data || typeof data !== 'object') return;
 
-  // Clean up old global uploads
-  globalUploads.clear();
+  // Diff: update existing entries, add new ones, remove stale ones
+  const serverIds = new Set();
+  let hasChanges = false;
 
   Object.values(data).forEach(item => {
     const id = item.uploadId || item.id;
     if (!id) return;
-    // Don't overwrite local uploads
-    if (myUploads.has(id)) return;
+    serverIds.add(id);
+    // Skip entries already hidden
+    if (hiddenGlobalIds.has(id)) return;
 
     const existing = globalUploads.get(id);
     const isUpdate = !!existing;
 
     globalUploads.set(id, {
       id: id,
-      name: item.filename || item.name || '未知文件',
-      progress: item.percent || item.progress || 0,
+      name: item.filename || item.name || (existing ? existing.name : '未知文件'),
+      progress: item.percent || item.progress || (existing ? existing.progress : 0),
       status: item.status || 'uploading',
-      mine: false
+      speed: existing ? existing.speed : null,
     });
 
     if (isUpdate) {
-      updateUploadItem(id, item.percent || item.progress || 0, item.status || 'uploading');
+      const serverProgress = item.percent || item.progress || 0;
+      const existingProgress = existing ? existing.progress : 0;
+      const displayProgress = Math.max(serverProgress, existingProgress);
+      const entry = globalUploads.get(id);
+      if (entry) entry.progress = displayProgress;
+      updateUploadItem(id, displayProgress, item.status || 'uploading', existing ? existing.speed : null);
     } else {
-      renderUploadPanel();
+      hasChanges = true;
     }
-  });
 
-  // Remove completed items from DOM after delay
-  Object.values(data).forEach(item => {
-    const id = item.uploadId || item.id;
+    // Schedule hide for completed items (only once, when status first changes)
     if (item.status === 'done' || item.status === 'error') {
-      scheduleHideUpload(id);
+      if (!existing || (existing.status !== 'done' && existing.status !== 'error')) {
+        scheduleHideUpload(id);
+      }
     }
   });
 
-  renderUploadPanel();
+  // Remove global entries no longer present in server data
+  for (const id of globalUploads.keys()) {
+    if (!serverIds.has(id)) {
+      globalUploads.delete(id);
+      hiddenGlobalIds.delete(id);
+      const el = document.getElementById('upload-' + id);
+      if (el) el.remove();
+      hasChanges = true;
+    }
+  }
+  // Also clean up hiddenGlobalIds for IDs the server has stopped sending
+  for (const id of hiddenGlobalIds) {
+    if (!serverIds.has(id)) hiddenGlobalIds.delete(id);
+  }
+
+  if (hasChanges) renderUploadPanel();
 }
 
 /* ===== Drag & Drop ===== */
