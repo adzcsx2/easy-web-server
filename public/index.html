@@ -795,7 +795,7 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
       <span class="btn-text">上传文件</span>
     </button>
   </div>
-  <input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(event)">
+  <input type="file" id="fileInput" multiple webkitdirectory directory style="display:none" onchange="handleFileSelect(event)">
 </header>
 
 <!-- ===== Main ===== -->
@@ -1123,17 +1123,20 @@ async function loadFiles() {
     let clickAction = '';
     let rowCls = '';
     if (f.isDir) {
-      clickAction = `onclick="navigateTo('${(currentPath ? currentPath + '/' : '') + f.name}')"`;
+      const navPath = (currentPath ? currentPath + '/' : '') + f.name;
+      clickAction = `onclick="navigateTo('${escapeHtml(navPath)}')"`;
       rowCls = 'file-row';
     } else {
       const ext = f.name.split('.').pop().toLowerCase();
-      if (ext === 'html' || ext === 'htm') {
-        const filePath = '/' + (currentPath ? currentPath + '/' : '') + encodeURIComponent(f.name);
-        clickAction = `onclick="window.open('${escapeHtml(filePath)}','_blank')"`;
-        rowCls = 'file-row';
-      } else if (isTextFile(f.name)) {
+      if (isTextFile(f.name)) {
+        // 文本文件通过安全渲染端点打开
         const filePath = (currentPath ? currentPath + '/' : '') + f.name;
         clickAction = `onclick="window.open('/api/files/view?path=${encodeURIComponent(filePath)}','_blank')"`;
+        rowCls = 'file-row';
+      } else {
+        // 其他所有文件类型直接在新窗口打开（让浏览器决定如何处理）
+        const filePath = '/' + (currentPath ? currentPath + '/' : '') + encodeURIComponent(f.name);
+        clickAction = `onclick="window.open('${escapeHtml(filePath)}','_blank')"`;
         rowCls = 'file-row';
       }
     }
@@ -1145,10 +1148,10 @@ async function loadFiles() {
     }
     if (!f.isDir) {
       const filePath = (currentPath ? currentPath + '/' : '') + f.name;
-      actionsHtml += `<button class="btn-icon" title="下载" onclick="event.stopPropagation();downloadFile('${filePath}')">&#8595;</button>`;
+      actionsHtml += `<button class="btn-icon" title="下载" onclick="event.stopPropagation();downloadFile('${escapeHtml(filePath)}')">&#8595;</button>`;
     }
     const delPath = (currentPath ? currentPath + '/' : '') + f.name;
-    actionsHtml += `<button class="btn-icon btn-icon-danger" title="删除" onclick="event.stopPropagation();showDeleteModal('${delPath}','${f.name}')">&#10005;</button>`;
+    actionsHtml += `<button class="btn-icon btn-icon-danger" title="删除" onclick="event.stopPropagation();showDeleteModal('${escapeHtml(delPath)}','${escapeHtml(f.name)}')">&#10005;</button>`;
 
     const siteBadgeHtml = f.isDir && f.hasIndexHtml
       ? '<span class="site-badge">site</span>'
@@ -1220,7 +1223,7 @@ function downloadFile(filePath) {
 function showDeleteModal(path, name) {
   deleteTarget = path;
   document.getElementById('deleteModalBody').innerHTML =
-    `确定要删除 <strong>${name}</strong> 吗？此操作不可撤销。`;
+    `确定要删除 <strong>${escapeHtml(name)}</strong> 吗？此操作不可撤销。`;
   document.getElementById('deleteModal').classList.add('active');
 }
 
@@ -1279,7 +1282,14 @@ function triggerUpload() {
 function handleFileSelect(event) {
   const files = event.target.files;
   if (files && files.length) {
-    queueUploads(Array.from(files));
+    const filesArray = Array.from(files);
+    // Check if any file has webkitRelativePath (folder upload)
+    const hasRelativePath = filesArray.some(f => f.webkitRelativePath);
+    if (hasRelativePath) {
+      queueFolderUploads(filesArray);
+    } else {
+      queueUploads(filesArray);
+    }
   }
   event.target.value = '';
 }
@@ -1288,6 +1298,43 @@ function queueUploads(files) {
   files.forEach(file => {
     uploadQueue.push(file);
   });
+  processQueue();
+}
+
+function queueFolderUploads(files) {
+  // Group files by their relative path directory
+  const pathGroups = new Map();
+
+  files.forEach(file => {
+    // webkitRelativePath contains the full relative path from the selected folder
+    const relativePath = file.webkitRelativePath || file.name;
+    const pathParts = relativePath.split('/');
+
+    // The first part is the folder name, rest is the path inside that folder
+    if (pathParts.length > 1) {
+      const folderPath = pathParts.slice(0, -1).join('/');
+      if (!pathGroups.has(folderPath)) {
+        pathGroups.set(folderPath, []);
+      }
+      pathGroups.get(folderPath).push(file);
+    } else {
+      // File at root of selected folder
+      if (!pathGroups.has('')) {
+        pathGroups.set('', []);
+      }
+      pathGroups.get('').push(file);
+    }
+  });
+
+  // Add files to upload queue with path information
+  pathGroups.forEach((folderFiles, folderPath) => {
+    folderFiles.forEach(file => {
+      // Add a custom property to track the relative path
+      file.targetSubPath = folderPath;
+      uploadQueue.push(file);
+    });
+  });
+
   processQueue();
 }
 
@@ -1303,16 +1350,21 @@ function startUpload(file) {
   const uploadId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
   // Create entry immediately so cancel button can find the right ID
+  const displayName = file.webkitRelativePath || file.name;
   globalUploads.set(uploadId, {
     id: uploadId,
-    name: file.name,
+    name: displayName,
     progress: 0,
     status: 'uploading',
   });
   renderUploadPanel();
 
   const fd = new FormData();
-  fd.append('targetPath', currentPath);
+  // If file has a subPath from folder upload, include it in targetPath
+  const targetPath = file.targetSubPath
+    ? (currentPath ? currentPath + '/' + file.targetSubPath : file.targetSubPath)
+    : currentPath;
+  fd.append('targetPath', targetPath);
   fd.append('files', file);
 
   const xhr = new XMLHttpRequest();
