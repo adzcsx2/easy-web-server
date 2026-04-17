@@ -6,6 +6,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
+const iconv = require('iconv-lite');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -87,6 +88,57 @@ function validatePath(unsafeRelativePath, allowedRoot) {
  */
 function sanitizeFilename(name) {
   return name.replace(/[/\\?%*:|"<>]/g, '_').replace(/\0/g, '');
+}
+
+/**
+ * Decode filename that may be encoded with non-UTF-8 charset.
+ * This handles cases where Chinese filenames are garbled due to encoding mismatches.
+ *
+ * Common issue: UTF-8 bytes of Chinese characters are misinterpreted as Latin-1/CP1252
+ * Example: "文档.doc" becomes "ææ¡£.doc" when UTF-8 bytes are read as Latin-1
+ */
+function decodeFilename(filename) {
+  if (!filename) return filename;
+
+  // If filename already contains valid Chinese characters, return as-is
+  if (/[\u4e00-\u9fa5]/.test(filename)) {
+    return filename;
+  }
+
+  // Try to detect and fix UTF-8 bytes interpreted as Latin-1 (most common issue)
+  // When UTF-8 Chinese bytes are misread as Latin-1, they appear as accented characters
+  const hasLatin1Artifacts = /[ÃÂÄÀÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ]/.test(filename);
+  if (hasLatin1Artifacts) {
+    try {
+      const latin1Buffer = Buffer.from(filename, 'latin1');
+      const decoded = iconv.decode(latin1Buffer, 'utf8');
+      // Verify the decoded string contains Chinese
+      if (/[\u4e00-\u9fa5]/.test(decoded)) {
+        return decoded;
+      }
+    } catch (e) {
+      // Continue to next attempt
+    }
+  }
+
+  // Try GBK encoding (some Windows systems use GBK for filenames)
+  // Check for patterns that look like GBK bytes interpreted as Latin-1
+  const hasGBKPatter = /[Â¼Ã«Â½ÃÂÃÃÃÃÃÃª]/.test(filename) ||
+                       /[€'ƒ"…†‡ˆ‰Š‹ŒŽ'""•–—˜™š›œžŸ]/.test(filename);
+  if (hasGBKPatter) {
+    try {
+      const gbkBuffer = Buffer.from(filename, 'latin1');
+      const decoded = iconv.decode(gbkBuffer, 'gbk');
+      if (/[\u4e00-\u9fa5]/.test(decoded)) {
+        return decoded;
+      }
+    } catch (e) {
+      // Continue
+    }
+  }
+
+  // Fallback: return original filename
+  return filename;
 }
 
 /**
@@ -312,7 +364,7 @@ app.post('/api/files/upload', (req, res) => {
       return res.status(403).json({ error: pathErr.message });
     }
 
-    // Ensure target directory exists
+    // Ensure target directory exists (create recursively if needed)
     if (!fs.existsSync(resolvedTarget)) {
       try {
         fs.mkdirSync(resolvedTarget, { recursive: true });
@@ -322,12 +374,19 @@ app.post('/api/files/upload', (req, res) => {
       }
     }
 
+    // Verify resolved target is a directory
+    if (!fs.statSync(resolvedTarget).isDirectory()) {
+      return res.status(400).json({ error: 'Target path is not a directory' });
+    }
+
     // Move files from temp to target directory
     const files = req.files || [];
     const savedFiles = [];
 
     for (const file of files) {
-      const safeName = sanitizeFilename(file.originalname);
+      // Decode filename to handle Chinese characters correctly
+      const decodedName = decodeFilename(file.originalname);
+      const safeName = sanitizeFilename(decodedName);
       let finalName = safeName;
       const destPath = path.join(resolvedTarget, finalName);
 
@@ -352,7 +411,7 @@ app.post('/api/files/upload', (req, res) => {
           // Fallback: write from buffer if disk storage didn't set path
           fs.writeFileSync(finalDest, file.buffer);
         }
-        savedFiles.push({ originalName: file.originalname, savedName: finalName, size: file.size });
+        savedFiles.push({ originalName: decodedName, savedName: finalName, size: file.size });
       } catch (moveErr) {
         console.error('Failed to move uploaded file:', moveErr);
         // Clean up temp file
