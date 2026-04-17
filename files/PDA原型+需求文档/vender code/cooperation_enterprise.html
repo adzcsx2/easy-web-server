@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合作企业档案</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .header {
+            background-color: #3366cc;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-item {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .header-right span {
+            font-size: 12px;
+        }
+        
+        .main-container {
+            background-color: white;
+            margin: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        .sub-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-primary {
+            background-color: #3366cc;
+            color: white;
+            border-color: #3366cc;
+        }
+        
+        .btn-secondary {
+            background-color: #f0f0f0;
+        }
+        
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .tab-active {
+            background-color: #3366cc;
+            color: white;
+        }
+        
+        .tab-inactive {
+            background-color: #e0e0e0;
+            color: #666;
+        }
+        
+        .form-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .form-section {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .form-row label {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .form-row input,
+        .form-row textarea {
+            padding: 8px;
+            border: 1px solid #d0d0d0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .form-row input:focus,
+        .form-row textarea:focus {
+            outline: none;
+            border-color: #3366cc;
+        }
+        
+        .form-row textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        .required {
+            color: red;
+        }
+        
+        .file-upload {
+            border: 1px dashed #d0d0d0;
+            border-radius: 4px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .file-upload:hover {
+            border-color: #3366cc;
+            background-color: #f0f8ff;
+        }
+        
+        .file-upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .file-upload-btn {
+            background-color: #3366cc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .ai-assistant {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #3366cc;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .ai-assistant img {
+            width: 30px;
+            height: 30px;
+        }
+        
+        .highlight {
+            background-color: #fff3cd;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="nav">
+            <div class="nav-item">合作企业档案</div>
+            <div class="nav-item">文件打印及印章管理</div>
+            <div class="nav-item">IP 业务管理</div>
+            <div class="nav-item">规章制度管理</div>
+        </div>
+        <div class="header-right">
+            <span>📋</span>
+            <span>🔍</span>
+            <span>⏪</span>
+            <span>成都晓晟科技有限公司</span>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="sub-header">
+            <span style="font-weight: bold;">公司</span>
+            <button class="btn btn-primary">新建</button>
+            <button class="btn btn-secondary">←</button>
+            <button class="btn btn-secondary">↻</button>
+            <button class="btn btn-primary">保存</button>
+            <button class="btn btn-secondary">取消</button>
+            <button class="btn btn-secondary">…更多</button>
+        </div>
+        
+        <div class="tab-container">
+            <div class="tabs">
+                <div class="tab tab-active">智能评级</div>
+                <div class="tab tab-inactive">企业基本信息识别</div>
+            </div>
+            
+            <div class="form-container">
+                <div class="form-section">
+                    <div class="form-row">
+                        <label>档案流程号</label>
+                        <input type="text" value="CDER-202603002" readonly>
+                    </div>
+                    <div class="form-row">
+                        <label style="color: red; font-weight: bold;">Vendor Code</label>
+                        <input type="text" placeholder="自动生成或手动输入" style="border: 2px solid red; background-color: #fff3cd;">
+                    </div>
+                    <div class="form-row">
+                        <label>登记人</label>
+                        <input type="text" value="Administrator" readonly>
+                    </div>
+                    <div class="form-row">
+                        <label>登记人电话</label>
+                        <input type="text" value="123456789" readonly>
+                    </div>
+                    <div class="form-row">
+                        <label>登记日期</label>
+                        <input type="text" value="2026年04月10日" readonly>
+                    </div>
+                    <div class="form-row">
+                        <label>文件邮寄地址</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>法定代表人<span class="required">*</span></label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>注册资本</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>纳税人资质<span class="required">*</span></label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>天眼评分</label>
+                        <input type="text" value="0.00" readonly>
+                    </div>
+                    <div class="form-row">
+                        <label>工商注册号</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>营业期限</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>企业类型</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>登记状态</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>成立日期</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>纳税人识别号</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>经营范围</label>
+                        <textarea></textarea>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="form-row">
+                        <label>企业名称<span class="required">*</span></label>
+                        <input type="text" class="highlight">
+                    </div>
+                    <div class="form-row">
+                        <label>企业简称</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>统一社会信用代码<span class="required">*</span></label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>注册地址<span class="required">*</span></label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>主体地位<span class="required">*</span></label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>备注</label>
+                        <textarea></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <label>供应商风险分析</label>
+                        <div class="file-upload">
+                            <div class="file-upload-content">
+                                <div style="font-size: 30px;">+</div>
+                                <button class="file-upload-btn">添加文件</button>
+                                <div style="font-size: 10px; color: #999;">或粘贴上传</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <label>风险提示</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>行业</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>实缴资本</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>组织机构代码</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>核准日期</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>公司性质</label>
+                        <input type="text">
+                    </div>
+                    <div class="form-row">
+                        <label>其他补充说明</label>
+                        <textarea></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="ai-assistant">
+        <span style="font-size: 24px;">AI</span>
+    </div>
+</body>
+</html>

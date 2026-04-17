@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>选择不良品类型</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .back-btn {
+            font-size: 24px;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+        
+        .title {
+            flex: 1;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .scan-section {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .scan-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #e8f5e8;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        
+        .scan-btn-text {
+            display: flex;
+            align-items: center;
+        }
+        
+        .scan-icon {
+            font-size: 20px;
+            margin-right: 8px;
+            color: #388e3c;
+        }
+        
+        .scan-btn-action {
+            background-color: #388e3c;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .scanned-info {
+            padding: 16px;
+            background-color: #fff3e0;
+            margin-top: 16px;
+            border-radius: 8px;
+        }
+        
+        .scanned-info div {
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .scanned-info div:last-child {
+            margin-bottom: 0;
+        }
+        
+        .product-type-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+        
+        .product-type-tag.head {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .product-type-tag.other {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .defect-section {
+            padding: 16px;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .section-desc {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+            padding: 12px;
+            background-color: #fafafa;
+            border-radius: 4px;
+        }
+        
+        .defect-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        
+        .defect-item {
+            padding: 20px 16px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .defect-item:hover {
+            transform: scale(1.02);
+        }
+        
+        .defect-item.selected {
+            border-color: #388e3c;
+        }
+        
+        .defect-item.a-class {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .defect-item.b-class {
+            background-color: #fff3e0;
+            color: #ef6c00;
+        }
+        
+        .defect-item.c-class {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .defect-item.d-class {
+            background-color: #e8f5e8;
+            color: #388e3c;
+        }
+        
+        .defect-code {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .defect-name {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .defect-desc {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        
+        .defect-reason-section {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .reason-label {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .reason-textarea {
+            width: 100%;
+            height: 100px;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: none;
+        }
+        
+        .warehouse-info {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            background-color: #fafafa;
+        }
+        
+        .warehouse-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .warehouse-select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: white;
+        }
+        
+        .action-section {
+            padding: 16px;
+        }
+        
+        .confirm-btn {
+            width: 100%;
+            padding: 16px;
+            background-color: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .confirm-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="back-btn">←</div>
+            <div class="title">选择不良品类型</div>
+            <div style="width: 24px;"></div>
+        </div>
+        
+        <div class="scan-section">
+            <div class="scan-btn">
+                <div class="scan-btn-text">
+                    <span class="scan-icon">📱</span>
+                    <span>扫描产品VSN码</span>
+                </div>
+                <div class="scan-btn-action">扫描</div>
+            </div>
+            
+            <div class="scanned-info">
+                <div><strong>产品VSN:</strong> V23007875</div>
+                <div><strong>产品名称:</strong> META3 机头组件</div>
+                <div><strong>物料编码:</strong> CM3-63001-01</div>
+                <div><strong>产品类型:</strong> <span class="product-type-tag head" id="productTypeTag">机头产品</span></div>
+            </div>
+        </div>
+        
+        <div class="defect-section" id="defectTypeSection">
+            <div class="section-title">请选择不良品类型</div>
+            <div class="section-desc">所有产品均可选择ABCD类不良，系统将自动归入对应不良品库</div></function></seed:tool_call>
+            <div class="defect-grid">
+                <div class="defect-item a-class">
+                    <div class="defect-code">A类</div>
+                    <div class="defect-name">严重不良</div>
+                    <div class="defect-desc">影响安全/功能</div>
+                </div>
+                <div class="defect-item b-class">
+                    <div class="defect-code">B类</div>
+                    <div class="defect-name">较严重不良</div>
+                    <div class="defect-desc">影响外观/性能</div>
+                </div>
+                <div class="defect-item c-class">
+                    <div class="defect-code">C类</div>
+                    <div class="defect-name">一般不良</div>
+                    <div class="defect-desc">轻微瑕疵</div>
+                </div>
+                <div class="defect-item d-class">
+                    <div class="defect-code">D类</div>
+                    <div class="defect-name">轻微不良</div>
+                    <div class="defect-desc">不影响使用</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="defect-reason-section">
+            <div class="section-title">不良原因</div>
+            <textarea class="reason-textarea" placeholder="请输入不良原因描述..." id="defectReason"></textarea>
+        </div>
+        
+        <div class="warehouse-info">
+            <div class="warehouse-title">目标库位</div>
+            <select class="warehouse-select" id="warehouseSelect">
+                <option value="headquarters-defect-A">总部不良品仓/A类/AA-1-01</option>
+                <option value="headquarters-defect-B">总部不良品仓/B类/BB-2-05</option>
+                <option value="headquarters-defect-C">总部不良品仓/C类/CC-3-08</option>
+                <option value="headquarters-defect-D">总部不良品仓/D类/DD-4-10</option>
+                <option value="other-warehouse">其他库位...</option>
+            </select>
+        </div>
+        
+        <div class="action-section">
+            <button class="confirm-btn" disabled>确认</button>
+        </div>
+    </div>
+    
+    <script>
+        document.querySelector('.back-btn').addEventListener('click', function() {
+            window.history.back();
+        });
+        
+        document.querySelector('.scan-btn').addEventListener('click', function() {
+            alert('开始扫描产品VSN码');
+            
+            const productTypeTag = document.querySelector('#productTypeTag');
+            const defectTypeSection = document.querySelector('#defectTypeSection');
+            
+            productTypeTag.textContent = '产品';
+            productTypeTag.className = 'product-type-tag head';
+            defectTypeSection.style.display = 'block';
+            
+            checkConfirmEnabled();
+        });
+        
+        const defectItems = document.querySelectorAll('.defect-item');
+        const confirmBtn = document.querySelector('.confirm-btn');
+        const defectReason = document.querySelector('#defectReason');
+        
+        defectItems.forEach(item => {
+            item.addEventListener('click', function() {
+                defectItems.forEach(i => i.classList.remove('selected'));
+                this.classList.add('selected');
+                
+                const defectCode = this.querySelector('.defect-code').textContent;
+                const warehouseSelect = document.querySelector('#warehouseSelect');
+                
+                const warehouseOptions = {
+                    'A类': 'headquarters-defect-A',
+                    'B类': 'headquarters-defect-B',
+                    'C类': 'headquarters-defect-C',
+                    'D类': 'headquarters-defect-D'
+                };
+                
+                if (warehouseOptions[defectCode]) {
+                    warehouseSelect.value = warehouseOptions[defectCode];
+                }
+                
+                checkConfirmEnabled();
+            });
+        });
+        
+        defectReason.addEventListener('input', function() {
+            checkConfirmEnabled();
+        });
+        
+        function checkConfirmEnabled() {
+            const warehouseSelect = document.querySelector('#warehouseSelect');
+            const hasWarehouse = warehouseSelect.value && warehouseSelect.value !== '';
+            confirmBtn.disabled = !hasWarehouse;
+        }
+        
+        document.querySelector('#warehouseSelect').addEventListener('change', function() {
+            checkConfirmEnabled();
+        });
+        
+        confirmBtn.addEventListener('click', function() {
+            const warehouseSelect = document.querySelector('#warehouseSelect');
+            const selectedWarehouse = warehouseSelect.options[warehouseSelect.selectedIndex].text;
+            
+            const selectedDefect = document.querySelector('.defect-item.selected');
+            const defectCode = selectedDefect.querySelector('.defect-code').textContent;
+            const defectName = selectedDefect.querySelector('.defect-name').textContent;
+            alert(`已选择${defectCode}(${defectName})，产品将归入${selectedWarehouse}`);
+            
+            window.history.back();
+        });
+    </script>
+</body>
+</html>

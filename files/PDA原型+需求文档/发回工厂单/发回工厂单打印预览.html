@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发回工厂单打印预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+        
+        /* 左侧打印设置 */
+        .print-settings {
+            width: 280px;
+            background-color: #f0f0f0;
+            padding: 24px;
+            border-right: 1px solid #e8e8e8;
+            overflow-y: auto;
+        }
+        
+        .print-settings h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #333;
+        }
+        
+        .setting-item {
+            margin-bottom: 24px;
+        }
+        
+        .setting-item label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .setting-item select,
+        .setting-item input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #fff;
+        }
+        
+        .setting-item input[type="radio"] {
+            width: auto;
+            margin-right: 8px;
+        }
+        
+        .setting-item div {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+        
+        .setting-item div label {
+            margin-bottom: 0;
+            font-weight: 400;
+            cursor: pointer;
+        }
+        
+        .print-buttons {
+            margin-top: 40px;
+        }
+        
+        .print-buttons button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+        }
+        
+        .print-button {
+            background-color: #1890ff;
+            color: #fff;
+        }
+        
+        .print-button:hover {
+            background-color: #40a9ff;
+        }
+        
+        .cancel-button {
+            background-color: #fff;
+            color: #666;
+            border: 1px solid #d9d9d9 !important;
+        }
+        
+        .cancel-button:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* 右侧打印预览 */
+        .preview-container {
+            flex: 1;
+            background-color: #f5f5f5;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .preview-content {
+            width: 100%;
+            max-width: 800px;
+            background-color: #fff;
+            border: 1px solid #e8e8e8;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .preview-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .preview-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .preview-date {
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            margin-bottom: 24px;
+        }
+        
+        .form-section {
+            margin-bottom: 32px;
+        }
+        
+        .form-row {
+            display: flex;
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            width: 120px;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-value {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-value input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-value select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .scan-section {
+            margin-bottom: 32px;
+            padding: 16px;
+            background-color: #f0f9ff;
+            border-radius: 8px;
+        }
+        
+        .scan-section h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .scan-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #1890ff;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .product-info {
+            background-color: #f0f9ff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .product-info div {
+            margin-bottom: 4px;
+        }
+        
+        .product-info div:first-child {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .product-info div:last-child {
+            margin-bottom: 0;
+            color: #9900ff;
+        }
+        
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 16px;
+        }
+        
+        .detail-table th {
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+            color: #666;
+            border: 1px solid #e0e0e0;
+            background-color: #f5f5f5;
+        }
+        
+        .detail-table td {
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .quantity-input {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .button-primary {
+            background-color: #1890ff;
+            color: #fff;
+        }
+        
+        .button-secondary {
+            background-color: #fff;
+            color: #666;
+            border: 1px solid #d9d9d9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧打印设置 -->
+        <div class="print-settings">
+            <h3>打印</h3>
+            
+            <div class="setting-item">
+                <label>打印机</label>
+                <select>
+                    <option>导出为PDF</option>
+                    <option>本地打印机</option>
+                </select>
+            </div>
+            
+            <div class="setting-item">
+                <label>份数</label>
+                <input type="number" value="1" min="1">
+            </div>
+            
+            <div class="setting-item">
+                <label>布局</label>
+                <div>
+                    <input type="radio" id="portrait" name="layout" checked>
+                    <label for="portrait">纵向</label>
+                    <input type="radio" id="landscape" name="layout">
+                    <label for="landscape">横向</label>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <label>页面</label>
+                <div>
+                    <input type="radio" id="all" name="page" checked>
+                    <label for="all">全部</label>
+                    <input type="radio" id="odd" name="page">
+                    <label for="odd">仅奇数页</label>
+                    <input type="radio" id="even" name="page">
+                    <label for="even">仅偶数页</label>
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <label>颜色</label>
+                <select>
+                    <option>彩色</option>
+                    <option>黑白</option>
+                </select>
+            </div>
+            
+            <div class="setting-item">
+                <label>更多设置</label>
+                <select>
+                    <option>默认</option>
+                    <option>高级设置</option>
+                </select>
+            </div>
+            
+            <div class="print-buttons">
+                <button class="print-button" onclick="window.print()">打印</button>
+                <button class="cancel-button" onclick="window.close()">取消</button>
+            </div>
+        </div>
+        
+        <!-- 右侧打印预览 -->
+        <div class="preview-container">
+            <div class="preview-content">
+                <div class="preview-header">
+                    <h1>发回工厂单</h1>
+                </div>
+                <div class="preview-date">2026/01/13 17:32</div>
+                
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-label">发货单号:</div>
+                        <div class="form-value">HPY-20260113-19932</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">制单人:</div>
+                        <div class="form-value">李晓华</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">单据日期:</div>
+                        <div class="form-value">2026-01-13</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">需求日期:</div>
+                        <div class="form-value">2026-01-13</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">部门:</div>
+                        <div class="form-value">内容中心/国内组</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">发货说明:</div>
+                        <div class="form-value">返回工厂</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">发货人:</div>
+                        <div class="form-value">李晓华</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">发货类型:</div>
+                        <div class="form-value">退回工厂</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">发回类型:</div>
+                        <div class="form-value">门店直发</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">收货人:</div>
+                        <div class="form-value">收货中心</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">收货电话:</div>
+                        <div class="form-value">15196995358</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">退货单号:</div>
+                        <div class="form-value"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">收货地址:</div>
+                        <div class="form-value">四川省成都市双流县科学大道四段四街</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">单据状态:</div>
+                        <div class="form-value">审批中</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">备注:</div>
+                        <div class="form-value"></div>
+                    </div>
+                </div>
+                
+
+                
+                <div class="product-info">
+                    <div>物料编码: R[SG-5.01-E13-CH]</div>
+                    <div>单位: 个</div>
+                    <div>物料类别: 电子产品</div>
+                    <div>类型: 唯一码商品</div>
+                </div>
+                
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>VSN</th>
+                            <th>库位</th>
+                            <th>发货确认数量</th>
+                            <th>收货确认数量</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>202601130001</td>
+                            <td>月付仓 - 工厂操作中心</td>
+                            <td>1</td>
+                            <td>1</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="product-info">
+                    <div>物料编码: CM3-63009-01</div>
+                    <div>单位: 个</div>
+                    <div>物料类别: 手机配件</div>
+                    <div>类型: 商品码商品</div>
+                </div>
+                
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>库位</th>
+                            <th>发货确认数量</th>
+                            <th>收货确认数量</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>月付仓 - 工厂操作中心</td>
+                            <td>48</td>
+                            <td>48</td>
+                        </tr>
+                        <tr>
+                            <td>月付仓 - 工厂操作中心</td>
+                            <td>24</td>
+                            <td>24</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+
+            </div>
+        </div>
+    </div>
+</body>
+</html>

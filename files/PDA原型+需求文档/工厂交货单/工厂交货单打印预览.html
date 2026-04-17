@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工厂交货单打印预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* 左侧打印设置 */
+        .print-settings {
+            width: 300px;
+            background-color: #fff;
+            border-right: 1px solid #e8e8e8;
+            padding: 24px;
+            overflow-y: auto;
+        }
+        
+        .settings-header {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #333;
+        }
+        
+        .settings-section {
+            margin-bottom: 24px;
+        }
+        
+        .settings-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #666;
+        }
+        
+        .format-option {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .format-option:hover {
+            background-color: #e6f7ff;
+        }
+        
+        .format-option.active {
+            background-color: #e6f7ff;
+            border-color: #1890ff;
+        }
+        
+        .format-option input[type="radio"] {
+            margin-right: 12px;
+        }
+        
+        .settings-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fff;
+        }
+        
+        .settings-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .radio-group {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+        }
+        
+        .radio-option input[type="radio"] {
+            margin-right: 6px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 32px;
+        }
+        
+        .action-button {
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .print-button {
+            background-color: #1890ff;
+            color: #fff;
+        }
+        
+        .print-button:hover {
+            background-color: #40a9ff;
+        }
+        
+        .cancel-button {
+            background-color: #fff;
+            color: #666;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .cancel-button:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* 右侧预览区域 */
+        .preview-container {
+            flex: 1;
+            background-color: #f5f5f5;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .preview-content {
+            width: 100%;
+            max-width: 800px;
+            background-color: #fff;
+            border: 1px solid #e8e8e8;
+            padding: 32px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .preview-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .preview-header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .preview-date {
+            font-size: 12px;
+            color: #666;
+            text-align: right;
+            margin-bottom: 24px;
+        }
+        
+        .form-section {
+            margin-bottom: 32px;
+        }
+        
+        .form-row {
+            display: flex;
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            width: 120px;
+            font-size: 14px;
+            color: #666;
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-value {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-value input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .form-value select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .scan-section {
+            margin-bottom: 32px;
+            padding: 16px;
+            background-color: #f0f9ff;
+            border-radius: 8px;
+        }
+        
+        .scan-section h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .scan-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #1890ff;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        
+        .product-info {
+            background-color: #f0f9ff;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .product-info div {
+            margin-bottom: 4px;
+        }
+        
+        .product-info div:first-child {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .product-info div:last-child {
+            margin-bottom: 0;
+            color: #9900ff;
+        }
+        
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e0e0e0;
+            margin-bottom: 16px;
+        }
+        
+        .detail-table th {
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+            color: #666;
+            border: 1px solid #e0e0e0;
+            background-color: #f5f5f5;
+        }
+        
+        .detail-table td {
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .quantity-input {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .button-primary {
+            background-color: #1890ff;
+            color: #fff;
+        }
+        
+        .button-secondary {
+            background-color: #fff;
+            color: #666;
+            border: 1px solid #d9d9d9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧打印设置 -->
+        <div class="print-settings">
+            <div class="settings-header">打印设置</div>
+            
+            <div class="settings-section">
+                <div class="settings-title">打印格式</div>
+                <div class="format-option active">
+                    <input type="radio" name="print-format" checked>
+                    <span>标准格式</span>
+                </div>
+                <div class="format-option">
+                    <input type="radio" name="print-format">
+                    <span>简洁格式</span>
+                </div>
+                <div class="format-option">
+                    <input type="radio" name="print-format">
+                    <span>详细格式</span>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">打印机</div>
+                <select class="settings-select">
+                    <option>导出为PDF</option>
+                    <option>本地打印机</option>
+                </select>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">份数</div>
+                <input type="number" value="1" min="1" class="settings-input">
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">布局</div>
+                <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="portrait" name="layout" checked>
+                        <label for="portrait">纵向</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="landscape" name="layout">
+                        <label for="landscape">横向</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="settings-section">
+                <div class="settings-title">颜色</div>
+                <select class="settings-select">
+                    <option>彩色</option>
+                    <option>黑白</option>
+                </select>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-button print-button" onclick="window.print()">打印</button>
+                <button class="action-button cancel-button" onclick="window.close()">取消</button>
+            </div>
+        </div>
+        
+        <!-- 右侧预览区域 -->
+        <div class="preview-container">
+            <div class="preview-content">
+                <div class="preview-header">
+                    <h1>工厂交货单</h1>
+                </div>
+                <div class="preview-date">2026/04/10 17:32</div>
+                
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-label">交货单号:</div>
+                        <div class="form-value">CKD-260410-0174</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">安排日期:</div>
+                        <div class="form-value">2026-04-10</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">截止日期:</div>
+                        <div class="form-value">2026年04月10日 17:32:00</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">是否为手机配件:</div>
+                        <div class="form-value">否</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">收货人姓名:</div>
+                        <div class="form-value">Catherine</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">收货人电话:</div>
+                        <div class="form-value">18305189999</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">收货人地址:</div>
+                        <div class="form-value">四川省成都市双流县科学大道四段四街</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">原销售端单号:</div>
+                        <div class="form-value">XSDS260408102705</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">源单据:</div>
+                        <div class="form-value">XSD260408102705</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">发货说明:</div>
+                        <div class="form-value">工厂交货</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">部门:</div>
+                        <div class="form-value">RD创新部</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">源位置:</div>
+                        <div class="form-value">成都总仓/发货仓</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">备注:</div>
+                        <div class="form-value"></div>
+                    </div>
+                </div>
+                
+
+                
+                <div class="product-info">
+                    <div>物料编码: CM3-63008-02</div>
+                    <div>物料名称: META3 背盖不锈钢摄像头装饰件</div>
+                    <div>物料类别: 摄像头组件</div>
+                    <div>单位: 个</div>
+                    <div>可用数量: 2</div>
+                    <div>类型: 唯一码商品</div>
+                </div>
+                
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>VSN</th>
+                            <th>库位</th>
+                            <th>实发</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>V23007875</td>
+                            <td>成都总仓/发货仓</td>
+                            <td>1</td>
+                        </tr>
+                        <tr>
+                            <td>V23007877</td>
+                            <td>成都总仓/发货仓</td>
+                            <td>1</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="product-info">
+                    <div>物料编码: CM3-63009-01</div>
+                    <div>物料名称: META3 中框铝合金组件-亮银色</div>
+                    <div>物料类别: 中框组件</div>
+                    <div>单位: 个</div>
+                    <div>可用数量: 48</div>
+                    <div>类型: 商品码商品</div>
+                </div>
+                
+                <table class="detail-table">
+                    <thead>
+                        <tr>
+                            <th>库位</th>
+                            <th>实发</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>成都总仓/发货仓</td>
+                            <td>48</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 打印格式选择
+        document.querySelectorAll('.format-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.format-option').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+                this.classList.add('active');
+                this.querySelector('input[type="radio"]').checked = true;
+            });
+        });
+        
+        // 布局选择
+        document.querySelectorAll('input[name="layout"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.id === 'landscape') {
+                    document.querySelector('.preview-content').style.maxWidth = '1100px';
+                } else {
+                    document.querySelector('.preview-content').style.maxWidth = '800px';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>置换单列表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .back-btn {
+            font-size: 24px;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+        
+        .title {
+            flex: 1;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .search-section {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .search-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .sort-filter {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .sort-btn, .filter-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+        }
+        
+        .stats-section {
+            padding: 12px 16px;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .list-section {
+            padding: 16px;
+        }
+        
+        .list-item {
+            padding: 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .list-item:hover {
+            background-color: #f9f9f9;
+        }
+        
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .item-id {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .item-status {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+        }
+        
+        .status.draft {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .status.inspecting {
+            background-color: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .status.approving {
+            background-color: #e8f5e8;
+            color: #388e3c;
+        }
+        
+        .status.completed {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+        }
+        
+        .item-details {
+            margin-bottom: 12px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .item-details-row {
+            display: flex;
+            margin-bottom: 4px;
+        }
+        
+        .item-details-label {
+            min-width: 80px;
+        }
+        
+        .item-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .action-btn {
+            font-size: 14px;
+            color: #1976d2;
+            cursor: pointer;
+        }
+        
+        .empty-state {
+            padding: 48px 16px;
+            text-align: center;
+            color: #9e9e9e;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .add-btn {
+            width: 100%;
+            padding: 16px;
+            background-color: #388e3c;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .filter-drawer {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100vh;
+            background-color: white;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease;
+            z-index: 200;
+            padding: 24px;
+        }
+        
+        .filter-drawer.open {
+            right: 0;
+        }
+        
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: none;
+            z-index: 199;
+        }
+        
+        .drawer-overlay.show {
+            display: block;
+        }
+        
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .drawer-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .drawer-close {
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .filter-section {
+            margin-bottom: 24px;
+        }
+        
+        .filter-section-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+            color: #666;
+        }
+        
+        .filter-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            cursor: pointer;
+        }
+        
+        .filter-checkbox {
+            margin-right: 12px;
+        }
+        
+        .filter-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 24px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .filter-btn-primary {
+            flex: 1;
+            padding: 12px;
+            background-color: #388e3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .filter-btn-secondary {
+            flex: 1;
+            padding: 12px;
+            background-color: white;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="back-btn" onclick="alert('返回上一页')">←</div>
+            <div class="title">置换单列表</div>
+        </div>
+        
+        <div class="search-section">
+            <div class="search-bar">
+                <input type="text" class="search-input" placeholder="输入单据编号/VSN进行检索">
+                <div class="sort-filter">
+                    <div class="sort-btn">排序 ▼</div>
+                    <div class="filter-btn">筛选 ⊟</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-section">
+            <div>今日置换：12</div>
+            <div>本月单据：45</div>
+        </div>
+        
+        <div class="list-section">
+            <div class="list-item" onclick="goToDetail('completed')">
+                <div class="item-header">
+                    <div class="item-id">ZHD-20260115-001</div>
+                    <div class="item-status status completed">已完成</div>
+                </div>
+                <div class="item-details">
+                    <div class="item-details-row">
+                        <div class="item-details-label">申请人</div>
+                        <div>张李莉</div>
+                    </div>
+                    <div class="item-details-row">
+                        <div class="item-details-label">创建时间</div>
+                        <div>2026-01-15 16:11:48</div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <div class="action-btn">打印</div>
+                </div>
+            </div>
+            
+            <div class="list-item" onclick="goToDetail('draft')">
+                <div class="item-header">
+                    <div class="item-id">ZHD-20260115-002</div>
+                    <div class="item-status status draft">草稿</div>
+                </div>
+                <div class="item-details">
+                    <div class="item-details-row">
+                        <div class="item-details-label">申请人</div>
+                        <div>刘启兰</div>
+                    </div>
+                    <div class="item-details-row">
+                        <div class="item-details-label">创建时间</div>
+                        <div>2026-01-15 15:30:22</div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <div class="action-btn">打印</div>
+                    <div class="action-btn">去处理</div>
+                </div>
+            </div>
+            
+            <div class="list-item" onclick="goToDetail('inspecting')">
+                <div class="item-header">
+                    <div class="item-id">ZHD-20260115-003</div>
+                    <div class="item-status status inspecting">检验中</div>
+                </div>
+                <div class="item-details">
+                    <div class="item-details-row">
+                        <div class="item-details-label">申请人</div>
+                        <div>王小明</div>
+                    </div>
+                    <div class="item-details-row">
+                        <div class="item-details-label">创建时间</div>
+                        <div>2026-01-15 14:20:15</div>
+                    </div>
+                </div>
+                <div class="item-actions">
+                    <div class="action-btn">打印</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="add-btn" onclick="goToAdd()">+ 新增置换单</div>
+    </div>
+    
+    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <div class="filter-drawer" id="filterDrawer">
+        <div class="drawer-header">
+            <div class="drawer-title">筛选</div>
+            <div class="drawer-close" id="drawerClose">×</div>
+        </div>
+        <div class="filter-section">
+            <div class="filter-section-title">状态</div>
+            <div class="filter-option">
+                <input type="checkbox" class="filter-checkbox" id="statusDraft">
+                <label for="statusDraft">草稿</label>
+            </div>
+            <div class="filter-option">
+                <input type="checkbox" class="filter-checkbox" id="statusInspecting">
+                <label for="statusInspecting">检验中</label>
+            </div>
+            <div class="filter-option">
+                <input type="checkbox" class="filter-checkbox" id="statusApproving">
+                <label for="statusApproving">仓管审核</label>
+            </div>
+            <div class="filter-option">
+                <input type="checkbox" class="filter-checkbox" id="statusCompleted">
+                <label for="statusCompleted">已完成</label>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <button class="filter-btn-secondary" id="filterReset">重置</button>
+            <button class="filter-btn-primary" id="filterApply">应用</button>
+        </div>
+    </div>
+    
+    <script>
+        function goToAdd() {
+            window.location.href = 'create_replacement.html';
+        }
+        
+        function goToDetail(status) {
+            if (status === 'completed') {
+                window.location.href = 'completed_replacement.html';
+            } else {
+                window.location.href = 'create_replacement.html';
+            }
+        }
+        
+        document.querySelector('.search-input').addEventListener('input', function() {
+            const searchText = this.value;
+            if (searchText.length > 0) {
+                console.log('搜索置换单:', searchText);
+            }
+        });
+        
+        const drawerOverlay = document.getElementById('drawerOverlay');
+        const filterDrawer = document.getElementById('filterDrawer');
+        const drawerClose = document.getElementById('drawerClose');
+        const filterBtn = document.querySelector('.filter-btn');
+        const filterReset = document.getElementById('filterReset');
+        const filterApply = document.getElementById('filterApply');
+        
+        filterBtn.addEventListener('click', function() {
+            drawerOverlay.classList.add('show');
+            filterDrawer.classList.add('open');
+        });
+        
+        function closeDrawer() {
+            drawerOverlay.classList.remove('show');
+            filterDrawer.classList.remove('open');
+        }
+        
+        drawerClose.addEventListener('click', closeDrawer);
+        drawerOverlay.addEventListener('click', closeDrawer);
+        
+        filterReset.addEventListener('click', function() {
+            document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        });
+        
+        filterApply.addEventListener('click', function() {
+            const selectedStatuses = [];
+            if (document.getElementById('statusDraft').checked) selectedStatuses.push('draft');
+            if (document.getElementById('statusInspecting').checked) selectedStatuses.push('inspecting');
+            if (document.getElementById('statusApproving').checked) selectedStatuses.push('approving');
+            if (document.getElementById('statusCompleted').checked) selectedStatuses.push('completed');
+            
+            console.log('筛选状态:', selectedStatuses);
+            closeDrawer();
+            
+            if (selectedStatuses.length > 0) {
+                alert('已应用筛选条件');
+            } else {
+                alert('请选择筛选条件');
+            }
+        });
+        
+        document.querySelector('.sort-btn').addEventListener('click', function() {
+            const sortMenu = document.createElement('div');
+            sortMenu.className = 'sort-menu';
+            sortMenu.innerHTML = `
+                <div class="sort-option" data-sort="desc">创建时间倒序（默认）</div>
+                <div class="sort-option" data-sort="asc">创建时间正序</div>
+            `;
+            
+            const rect = this.getBoundingClientRect();
+            sortMenu.style.position = 'absolute';
+            sortMenu.style.top = (rect.bottom + 8) + 'px';
+            sortMenu.style.right = (window.innerWidth - rect.right) + 'px';
+            sortMenu.style.backgroundColor = 'white';
+            sortMenu.style.borderRadius = '8px';
+            sortMenu.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+            sortMenu.style.padding = '8px 0';
+            sortMenu.style.minWidth = '120px';
+            sortMenu.style.zIndex = '1000';
+            
+            document.body.appendChild(sortMenu);
+            
+            sortMenu.querySelectorAll('.sort-option').forEach(option => {
+                option.style.padding = '12px 16px';
+                option.style.cursor = 'pointer';
+                option.style.fontSize = '14px';
+                
+                option.addEventListener('click', function() {
+                    const sortType = this.getAttribute('data-sort');
+                    console.log('排序方式:', sortType === 'desc' ? '创建时间倒序' : '创建时间正序');
+                    alert('已按照' + (sortType === 'desc' ? '创建时间倒序' : '创建时间正序') + '排序');
+                    if (document.body.contains(sortMenu)) {
+                        document.body.removeChild(sortMenu);
+                    }
+                });
+            });
+            
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu(e) {
+                    if (!sortMenu.contains(e.target) && e.target !== document.querySelector('.sort-btn')) {
+                        if (document.body.contains(sortMenu)) {
+                            document.body.removeChild(sortMenu);
+                        }
+                        document.removeEventListener('click', closeMenu);
+                    }
+                });
+            }, 10);
+        });
+        
+        document.querySelectorAll('.list-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (e.target.classList.contains('action-btn')) {
+                    return;
+                }
+                const orderId = this.querySelector('.item-id').textContent;
+                console.log('查看置换单: ' + orderId);
+            });
+        });
+        
+        document.querySelectorAll('.action-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (btn.textContent === '打印') {
+                    window.location.href = 'print_preview.html';
+                } else if (btn.textContent === '去处理') {
+                    window.location.href = 'create_replacement.html';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>产品档案 - SIGNATURE PINK SAPPHIRE</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* 顶部导航栏 */
+        .navbar {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .navbar-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .product-code {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background: #e9ecef;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background: #0069d9;
+        }
+
+        .btn-icon {
+            padding: 6px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            margin: 20px 20px 10px;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-draft {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-private {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .status-published {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        /* 产品信息区域 */
+        .product-info {
+            padding: 0 20px 20px;
+        }
+
+        .product-header {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .product-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .star-icon {
+            color: #ffc107;
+            font-size: 20px;
+        }
+
+        .product-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        .lang-tag {
+            background: #e9ecef;
+            color: #495057;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .add-file-btn {
+            width: 120px;
+            height: 120px;
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .add-file-btn:hover {
+            border-color: #007bff;
+            background: #f8f9fa;
+        }
+
+        .add-file-icon {
+            font-size: 24px;
+            color: #6c757d;
+            margin-bottom: 8px;
+        }
+
+        .add-file-text {
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+        }
+
+        .checkbox-group {
+            margin: 15px 0;
+            display: flex;
+            gap: 20px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 标签页 */
+        .tabs {
+            border-bottom: 1px solid #dee2e6;
+            margin: 20px 0;
+        }
+
+        .tab-list {
+            display: flex;
+            list-style: none;
+        }
+
+        .tab-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab-item.active {
+            color: #007bff;
+            border-bottom-color: #007bff;
+            font-weight: 500;
+        }
+
+        /* 信息表单 */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .form-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tax-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .tax-tag {
+            padding: 4px 8px;
+            background: #e9ecef;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #495057;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        /* 右侧按钮 */
+        .side-buttons {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .action-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .edit-history-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .ai-assistant-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 20px;
+        }
+
+        /* 打印标签弹窗 */
+        .print-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .print-modal.active {
+            display: flex;
+        }
+
+        .print-modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .print-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .print-modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        .print-modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .print-modal-close:hover {
+            background: #e9ecef;
+        }
+
+        .label-preview {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .label-info {
+            flex: 1;
+        }
+
+        .label-field {
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .label-field strong {
+            display: inline-block;
+            width: 80px;
+            color: #495057;
+        }
+
+        .label-qrcode {
+            width: 120px;
+            height: 120px;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qrcode-placeholder {
+            font-size: 48px;
+        }
+
+        .print-options {
+            margin: 20px 0;
+        }
+
+        .print-options label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .print-options input {
+            width: 100px;
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .print-modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn:hover {
+            background: #e9ecef;
+        }
+
+        .modal-btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .modal-btn-primary:hover {
+            background: #0069d9;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .navbar-actions {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+
+            .btn {
+                font-size: 12px;
+                padding: 4px 8px;
+            }
+
+            .product-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .add-file-btn {
+                width: 100%;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航栏 -->
+        <div class="navbar">
+            <div class="navbar-left">
+                <div class="product-code">[0026771M-016478] SIGNATURE PINK SAPPHIRE R...</div>
+                <button class="btn btn-primary">新建</button>
+                <button class="btn btn-icon">←</button>
+                <button class="btn btn-icon">⟳</button>
+                <button class="btn btn-outline">更多</button>
+            </div>
+            <div class="navbar-actions">
+                <span>额外价格: 0</span>
+                <span style="margin-left: 15px;">安全库存: 0.00</span>
+                <span style="margin-left: 15px;">文档: 0</span>
+                <button class="btn btn-primary" style="margin-left: 20px;" onclick="openPrintModal()">🏷️ 打印标签</button>
+                <button class="btn btn-outline">更多 ▾</button>
+                <button class="btn btn-icon">⭐</button>
+            </div>
+        </div>
+
+        <!-- 状态标签 -->
+        <div class="status-badges">
+            <span class="status-badge status-draft">草稿</span>
+            <span class="status-badge status-pending">待定</span>
+            <span class="status-badge status-private">私人</span>
+            <span class="status-badge status-published">发布</span>
+        </div>
+
+        <!-- 产品信息 -->
+        <div class="product-info">
+            <!-- 产品标题 -->
+            <div class="product-header">
+                <div class="product-title">
+                    <span class="star-icon">★</span>
+                    <h1 class="product-name">SIGNATURE PINK SAPPHIRE RHV-2 0546260 CN</h1>
+                    <span class="lang-tag">ZH</span>
+                </div>
+                <div class="add-file-btn">
+                    <span class="add-file-icon">+</span>
+                    <div class="add-file-text">添加文件<br>或拖上传</div>
+                </div>
+            </div>
+
+            <!-- 产品属性复选框 -->
+            <div class="checkbox-group">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="sellable">
+                    <label for="sellable">可销售</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="purchasable" checked>
+                    <label for="purchasable">可采购</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="outsourced">
+                    <label for="outsourced">委外产品</label>
+                </div>
+            </div>
+
+            <!-- 标签页 -->
+            <div class="tabs">
+                <ul class="tab-list">
+                    <li class="tab-item active">基本信息</li>
+                    <li class="tab-item">网站基础信息</li>
+                    <li class="tab-item">属性规则</li>
+                    <li class="tab-item">属性和变体</li>
+                    <li class="tab-item">采购</li>
+                    <li class="tab-item">库存</li>
+                    <li class="tab-item">会计</li>
+                </ul>
+            </div>
+
+            <!-- 表单内容 -->
+            <div class="form-grid">
+                <!-- 左侧表单 -->
+                <div>
+                    <div class="form-row">
+                        <label class="form-label">产品类别 *</label>
+                        <select class="form-select">
+                            <option>可库存产品</option>
+                            <option>服务</option>
+                            <option>数字产品</option>
+                        </select>
+                        <div class="help-text">可储存的产品是您管理库存水平的实物项目。可以在交付前开具发票。</div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">开票原则 *</label>
+                        <select class="form-select">
+                            <option>订购数量</option>
+                            <option>交付数量</option>
+                        </select>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">重新开票费用？</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" id="no-reinvoice" name="reinvoice" checked>
+                                <label for="no-reinvoice">否</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="cost-reinvoice" name="reinvoice">
+                                <label for="cost-reinvoice">以成本</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" id="price-reinvoice" name="reinvoice">
+                                <label for="price-reinvoice">销售价格</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">计量单位 *</label>
+                        <input type="text" class="form-input" value="部">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">采购单位 *</label>
+                        <input type="text" class="form-input" value="部">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">上市时间</label>
+                        <input type="date" class="form-input">
+                    </div>
+                </div>
+
+                <!-- 右侧表单 -->
+                <div>
+                    <div class="form-row">
+                        <label class="form-label">销售价格 *</label>
+                        <input type="text" class="form-input" value="¥0.00">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">客户税项 *</label>
+                        <div class="tax-tags">
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                            <span class="tax-tag">13% INC</span>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">美元价</label>
+                        <input type="text" class="form-input" value="0.00">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">港元价</label>
+                        <input type="text" class="form-input" value="0.00">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">Cost *</label>
+                        <input type="text" class="form-input" value="¥2.00 每部">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">产品类别 *</label>
+                        <input type="text" class="form-input" value="产成品 / 手机 / Signature 4G / 老款手机">
+                    </div>
+
+                    <div class="form-row">
+                        <label class="form-label">内部参考号</label>
+                        <input type="text" class="form-input" value="0026771M-016478">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧按钮 -->
+    <div class="side-buttons">
+        <div class="action-btn edit-history-btn" title="修改记录">
+            📝
+        </div>
+        <div class="action-btn ai-assistant-btn" title="AI助手">
+            A
+        </div>
+    </div>
+
+    <script>
+        // 标签页切换
+        document.querySelectorAll('.tab-item').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 模拟添加文件
+        document.querySelector('.add-file-btn').addEventListener('click', function() {
+            alert('选择文件上传');
+        });
+
+        // 模拟修改记录
+        document.querySelector('.edit-history-btn').addEventListener('click', function() {
+            alert('查看修改记录');
+        });
+
+        // 模拟AI助手
+        document.querySelector('.ai-assistant-btn').addEventListener('click', function() {
+            alert('AI助手功能');
+        });
+
+        // 打印标签功能
+        function openPrintModal() {
+            const modal = document.getElementById('printModal');
+            modal.classList.add('active');
+        }
+
+        function closePrintModal() {
+            const modal = document.getElementById('printModal');
+            modal.classList.remove('active');
+        }
+
+        function printLabels() {
+            const quantity = document.getElementById('printQuantity').value;
+            alert(`正在打印 ${quantity} 个标签...`);
+            // 实际项目中，这里会调用打印功能
+            closePrintModal();
+        }
+    </script>
+
+    <!-- 打印标签弹窗 -->
+    <div class="print-modal" id="printModal">
+        <div class="print-modal-content">
+            <div class="print-modal-header">
+                <h3 class="print-modal-title">打印标签</h3>
+                <button class="print-modal-close" onclick="closePrintModal()">✕</button>
+            </div>
+            
+            <div class="label-preview">
+                <div class="label-info">
+                    <div class="label-field"><strong>产品名称:</strong> SIGNATURE PINK SAPPHIRE RHV-2 0546260 CN</div>
+                    <div class="label-field"><strong>产品编号:</strong> 0026771M-016478</div>
+                    <div class="label-field"><strong>供应商:</strong> 成都晓晨科技有限公司</div>
+                </div>
+                <div class="label-qrcode">
+                    <div class="qrcode-placeholder">📱</div>
+                </div>
+            </div>
+            
+            <div class="print-options">
+                <label for="printQuantity">打印数量:</label>
+                <input type="number" id="printQuantity" value="1" min="1" max="100">
+            </div>
+            
+            <div class="print-modal-footer">
+                <button class="modal-btn" onclick="closePrintModal()">取消</button>
+                <button class="modal-btn modal-btn-primary" onclick="printLabels()">打印</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

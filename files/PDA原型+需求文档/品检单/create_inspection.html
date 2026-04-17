@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新增品检单</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .back-btn {
+            font-size: 24px;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+        
+        .title {
+            flex: 1;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .header-buttons {
+            display: flex;
+            align-items: center;
+        }
+        
+        .draft-btn {
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+            margin-right: 15px;
+        }
+        
+        .settings-btn {
+            font-size: 14px;
+            color: #333;
+            cursor: pointer;
+        }
+        
+        .info-section {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        
+        .info-label {
+            color: #666;
+        }
+        
+        .info-value {
+            flex: 1;
+            text-align: right;
+            margin-left: 16px;
+        }
+        
+        .info-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: right;
+        }
+        
+        .status {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .inspection-settings {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .settings-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 12px;
+        }
+        
+        .settings-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .setting-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .setting-btn.good {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .setting-btn.bad {
+            background-color: #e0e0e0;
+            color: #666;
+        }
+        
+        .scan-section {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .scan-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #e8f5e8;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .scan-btn-text {
+            display: flex;
+            align-items: center;
+        }
+        
+        .scan-icon {
+            font-size: 18px;
+            margin-right: 8px;
+            color: #388e3c;
+        }
+        
+        .scan-btn-action {
+            background-color: #388e3c;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9e9e9e;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 12px 12px 12px 36px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .inspection-list {
+            padding: 16px;
+        }
+        
+        .inspection-item {
+            margin-bottom: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .inspection-item-header {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: #e8f5e8;
+        }
+        
+        .inspection-index {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 12px;
+            background-color: #388e3c;
+            color: white;
+        }
+        
+        .inspection-vsn {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .delete-btn {
+            font-size: 16px;
+            color: #c62828;
+            cursor: pointer;
+        }
+        
+        .inspection-content {
+            padding: 12px;
+            background-color: white;
+        }
+        
+        .inspection-details {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .inspection-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+        }
+        
+        .inspection-info-container {
+            flex: 1;
+        }
+        
+        .inspection-info {
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #666;
+        }
+        
+        .inspection-result {
+            color: #4caf50;
+            font-weight: 500;
+        }
+        
+        .inspection-result.bad {
+            color: #f44336;
+        }
+        
+        .inspection-bad-reason {
+            background-color: #ffebee;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #c62828;
+        }
+        
+        .empty-state {
+            padding: 48px 16px;
+            text-align: center;
+            color: #9e9e9e;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .add-item-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            border: 1px dashed #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .add-icon {
+            font-size: 24px;
+            margin-right: 8px;
+        }
+        
+        .stats-section {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .stats-item {
+            font-size: 14px;
+        }
+        
+        .stats-label {
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .stats-value {
+            font-weight: 500;
+        }
+        
+        .action-section {
+            padding: 16px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+        }
+        
+        .receipt-btn {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .print-btn.action-button {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        .submit-btn {
+            background-color: #388e3c;
+            color: white;
+        }
+        
+        /* 设置弹窗 */
+        .settings-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            z-index: 1000;
+            display: none;
+        }
+
+        .settings-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .settings-back {
+            font-size: 18px;
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .settings-title {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .settings-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .settings-section h3 {
+            color: #388e3c;
+            margin-bottom: 10px;
+        }
+
+        .settings-info {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .dot.green {
+            background: #388e3c;
+        }
+
+        .dot.gray {
+            background: #ccc;
+        }
+
+        .settings-search {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .settings-search input {
+            width: 100%;
+            padding: 10px 40px 10px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+        }
+
+        .settings-group {
+            margin-bottom: 20px;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px 4px 0 0;
+            cursor: pointer;
+        }
+
+        .group-content {
+            border: 1px solid #e0e0e0;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+
+        .field-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .field-item:last-child {
+            border-bottom: none;
+        }
+
+        .field-controls {
+            display: flex;
+            align-items: center;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #388e3c;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .drag-icon {
+            font-size: 16px;
+            color: #999;
+            cursor: grab;
+        }
+
+        .settings-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .reset-btn {
+            display: flex;
+            align-items: center;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .reset-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            color: white;
+            text-align: center;
+            line-height: 18px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        .settings-footer .save-btn {
+            padding: 8px 24px;
+            background: #388e3c;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        /* 已完成状态的样式 */
+        .inspection-item.completed {
+            background-color: #e8f5e8;
+        }
+        
+        .inspection-item.completed .inspection-index {
+            background-color: #388e3c;
+            color: white;
+        }
+        
+        /* 待处理状态的样式 */
+        .inspection-item.pending {
+            background-color: white;
+        }
+        
+        .inspection-item.pending .inspection-index {
+            background-color: #e0e0e0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <div class="back-btn">←</div>
+            <div class="title">新增品检单</div>
+            <div class="header-buttons">
+                <div class="draft-btn">保存为草稿</div>
+                <div class="settings-btn">设置</div>
+            </div>
+        </div>
+        
+        <!-- 信息编辑区域 -->
+        <div class="info-section">
+            <div class="info-item">
+                <span class="info-label">品检单号:</span>
+                <span class="info-value">PJD-20260115-10648</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">单据日期:</span>
+                <div class="info-value">
+                    <input type="date" class="info-input" value="2026-01-15">
+                </div>
+            </div>
+            <div class="info-item">
+                <span class="info-label">来源单据:</span>
+                <div class="info-value">
+                    <select class="info-input">
+                        <option value="RKD-20260115-02481" selected>RKD-20260115-02481</option>
+                        <option value="RKD-20260114-02480">RKD-20260114-02480</option>
+                        <option value="RKD-20260113-02479">RKD-20260113-02479</option>
+                    </select>
+                </div>
+            </div>
+            <div class="info-item">
+                <span class="info-label">检验类型:</span>
+                <div class="info-value">
+                    <select class="info-input">
+                        <option value="采购到货送检" selected>采购到货送检</option>
+                        <option value="销售退货送检">销售退货送检</option>
+                        <option value="生产送检">生产送检</option>
+                        <option value="其他送检">其他送检</option>
+                        <option value="维修送检">维修送检</option>
+                        <option value="维修复检">维修复检</option>
+                        <option value="在库复检">在库复检</option>
+                    </select>
+                </div>
+            </div>
+            <div class="info-item">
+                <span class="info-label">检验员:</span>
+                <div class="info-value">
+                    <select class="info-input">
+                        <option value="当前用户" selected>当前用户</option>
+                        <option value="张三">张三</option>
+                        <option value="李四">李四</option>
+                    </select>
+                </div>
+            </div>
+            <div class="info-item">
+                <span class="info-label">制单人:</span>
+                <div class="info-value">
+                    <select class="info-input">
+                        <option value="当前用户" selected>当前用户</option>
+                        <option value="张三">张三</option>
+                        <option value="李四">李四</option>
+                    </select>
+                </div>
+            </div>
+            <div class="info-item">
+                <span class="info-label">备注:</span>
+                <div class="info-value">
+                    <textarea class="info-input" rows="2" placeholder="请输入备注"></textarea>
+                </div>
+            </div>
+            <div class="info-item">
+                <span class="info-label">单据状态:</span>
+                <span class="status">待质检</span>
+            </div>
+        </div>
+        
+        <!-- 扫码检验设置 -->
+        <div class="inspection-settings">
+            <div class="settings-title">扫码检验设置</div>
+            <div class="settings-buttons">
+                <div class="setting-btn good">✅ 良品</div>
+                <div class="setting-btn bad">❌ 不良品</div>
+            </div>
+        </div>
+        
+        <!-- 扫描和搜索区域 -->
+        <div class="scan-section">
+            <div class="scan-btn">
+                <div class="scan-btn-text">
+                    <span class="scan-icon">📱</span>
+                    <span>扫描产品VSN码</span>
+                </div>
+                <div class="scan-btn-action">按实体键扫描</div>
+            </div>
+            <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input" placeholder="搜索产品编码/VSN">
+            </div>
+        </div>
+        
+        <!-- 品检明细 -->
+        <div class="inspection-list">
+            <!-- 品检项1 - 良品 -->
+            <div class="inspection-item">
+                <div class="inspection-item-header">
+                    <div class="inspection-index">1</div>
+                    <div class="inspection-vsn">物料编码: CM3-63009-01</div>
+                </div>
+                <div class="inspection-content">
+                    <div class="inspection-details">
+                        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=metal%20camera%20cover%20accessory%20silver&image_size=square" alt="物料图片" class="inspection-image">
+                        <div class="inspection-info-container">
+                            <div class="inspection-info">物料名称: META3 中框铝合金组件-亮银色</div>
+                            <div class="inspection-info">单位: 个</div>
+                            <div class="inspection-info" style="color: #9c27b0;">类型: 唯一码商品</div>
+                            <div class="inspection-info">检验结果: <span class="inspection-result">良品</span></div>
+                            <div class="inspection-stats" style="display: flex; justify-content: space-between; margin: 12px 0;">
+                                <span>合格数量: 2</span>
+                            </div>
+                            <table class="vsn-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background-color: #f5f5f5;">
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">VSN</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">库位</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">良品数量</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">V23007876</td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">总部良品仓/LL-2-12</td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">1</td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
+                                            <div class="print-btn" style="display: inline-block; margin-right: 8px; cursor: pointer;">🖨️</div>
+                                            <div class="delete-btn" style="display: inline-block; cursor: pointer;">🗑️</div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">V23007879</td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">总部良品仓/LL-2-12</td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">1</td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
+                                            <div class="print-btn" style="display: inline-block; margin-right: 8px; cursor: pointer;">🖨️</div>
+                                            <div class="delete-btn" style="display: inline-block; cursor: pointer;">🗑️</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="view-all-vsn" style="text-align: right; margin-top: 8px; color: #1976d2; font-size: 13px; cursor: pointer;" onclick="window.location.href='inspection_vsn_list.html'">
+                                查看全部VSN →
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 品检项2 - 不良品 -->
+            <div class="inspection-item">
+                <div class="inspection-item-header">
+                    <div class="inspection-index">2</div>
+                    <div class="inspection-vsn">物料编码: CM3-63008-02</div>
+                </div>
+                <div class="inspection-content">
+                    <div class="inspection-details">
+                        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=metal%20camera%20cover%20accessory%20silver&image_size=square" alt="物料图片" class="inspection-image">
+                        <div class="inspection-info-container">
+                            <div class="inspection-info">物料名称: META3 背盖不锈钢摄像头装饰件</div>
+                            <div class="inspection-info">单位: 个</div>
+                            <div class="inspection-info" style="color: #9c27b0;">类型: 商品码商品</div>
+                            <div class="inspection-info">检验结果: <span class="inspection-result bad">不良品</span></div>
+                            <div class="inspection-stats" style="display: flex; justify-content: space-between; margin: 12px 0;">
+                                <span>不合格数量: 96</span>
+                            </div>
+                            <table class="vsn-table" style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background-color: #f5f5f5;">
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">库位</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">不良品数量</th>
+                                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e0e0e0;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
+                                            <select style="padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px;">
+                                                <option value="headquarters-defect-A">总部不良品仓/A类/AA-1-01</option>
+                                                <option value="headquarters-defect-B" selected>总部不良品仓/B类/BB-3-08</option>
+                                                <option value="headquarters-defect-C">总部不良品仓/C类/CC-3-08</option>
+                                                <option value="headquarters-defect-D">总部不良品仓/D类/DD-4-10</option>
+                                                <option value="other-warehouse">其他库位...</option>
+                                            </select>
+                                        </td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
+                                            <input type="number" style="width: 60px; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px;" value="96" min="0">
+                                        </td>
+                                        <td style="padding: 10px 8px; border-bottom: 1px solid #f0f0f0;">
+                                            <div class="print-btn" style="display: inline-block; margin-right: 8px; cursor: pointer;">🖨️</div>
+                                            <div class="delete-btn" style="display: inline-block; cursor: pointer;">🗑️</div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 空状态 -->
+            <div class="empty-state">
+                <div class="empty-icon">📦</div>
+                <div>请继续扫描产品VSN码</div>
+                <div style="margin-top: 8px;">已扫 2 / 2 商品</div>
+            </div>
+            
+            <!-- 添加按钮 -->
+            <div class="add-item-btn">
+                <span class="add-icon">+</span>
+                <span>添加商品</span>
+            </div>
+        </div>
+        
+        <!-- 统计信息 -->
+        <div class="stats-section">
+            <div class="stats-grid">
+                <div class="stats-item">
+                    <div class="stats-label">品检总数</div>
+                    <div class="stats-value">110</div>
+                </div>
+                <div class="stats-item">
+                    <div class="stats-label">良品数量</div>
+                    <div class="stats-value">100</div>
+                </div>
+                <div class="stats-item">
+                    <div class="stats-label">不良数量</div>
+                    <div class="stats-value">10</div>
+                </div>
+                <div class="stats-item">
+                    <div class="stats-label">合格率</div>
+                    <div class="stats-value">91%</div>
+                </div>
+                <div class="stats-item">
+                    <div class="stats-label">不良率</div>
+                    <div class="stats-value">9%</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="action-section">
+            <div class="action-buttons">
+                <div class="action-button print-btn">打印单据</div>
+                <div class="action-button submit-btn">提交结果</div>
+            </div>
+        </div>
+        
+        <!-- 设置弹窗 -->
+        <div class="settings-modal">
+            <div class="settings-content">
+                <div class="settings-header">
+                    <div class="settings-back" onclick="closeSettings()">&lt;</div>
+                    <div class="settings-title">自定义</div>
+                </div>
+                <div class="settings-body">
+                    <div class="settings-section">
+                        <h3>字段自定义</h3>
+                        <div class="settings-info">
+                            <span class="dot green"></span> 为显示该字段；
+                            <span class="dot gray"></span> 为隐藏该字段；
+                            长按 <span class="drag-icon">≡</span> 可上下拖动排序；
+                        </div>
+                        <div class="settings-search">
+                            <input type="text" placeholder="输入字段名称查询">
+                            <div class="search-icon">🔍</div>
+                        </div>
+                        
+                        <div class="settings-group">
+                            <div class="group-header">
+                                <span>表头显示内容</span>
+                                <span class="collapse-btn">收起 ▲</span>
+                            </div>
+                            <div class="group-content">
+                                <div class="field-item">
+                                    <span>品检单号</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                                <div class="field-item">
+                                    <span>来源单据号</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                                <div class="field-item">
+                                    <span>采购订单号</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                                <div class="field-item">
+                                    <span>品检日期</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                                <div class="field-item">
+                                    <span>备注</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-group">
+                            <div class="group-header">
+                                <span>明细显示内容</span>
+                                <span class="collapse-btn">收起 ▲</span>
+                            </div>
+                            <div class="group-content">
+                                <div class="field-item">
+                                    <span>VSN</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                                <div class="field-item">
+                                    <span>库位</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                                <div class="field-item">
+                                    <span>良品数量</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                                <div class="field-item">
+                                    <span>不良品数量</span>
+                                    <div class="field-controls">
+                                        <label class="switch">
+                                            <input type="checkbox" checked>
+                                            <span class="slider"></span>
+                                        </label>
+                                        <span class="drag-icon">≡</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-footer">
+                    <div class="reset-btn">
+                        <span class="reset-icon">×</span>
+                        <span>重置</span>
+                    </div>
+                    <button class="save-btn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 页面交互功能实现
+        
+        // 返回按钮点击事件
+        document.querySelector('.back-btn').addEventListener('click', function() {
+            // 跳转到列表页面
+            window.location.href = 'inspection_list.html';
+        });
+        
+        // 保存为草稿按钮点击事件
+        document.querySelector('.draft-btn').addEventListener('click', function() {
+            console.log('保存为草稿');
+            // 模拟保存到本地存储
+            localStorage.setItem('draft_inspection', JSON.stringify({
+                inspectionNumber: 'PJD-20260115-10648',
+                inspectionDate: document.querySelector('input[type="date"]').value,
+                sourceDocument: document.querySelector('select').value,
+                inspectionType: document.querySelector('select:nth-of-type(2)').value,
+                inspector: document.querySelector('select:nth-of-type(3)').value,
+                status: '待质检（PDA草稿）',
+                savedAt: new Date().toISOString()
+            }));
+            alert('保存为草稿成功，状态变为：待质检（PDA草稿）');
+            // 跳转到列表页面
+            window.location.href = 'inspection_list.html';
+        });
+        
+        // 设置按钮点击事件
+        document.querySelector('.settings-btn').addEventListener('click', function() {
+            document.querySelector('.settings-modal').style.display = 'block';
+        });
+        
+        // 关闭设置弹窗
+        function closeSettings() {
+            document.querySelector('.settings-modal').style.display = 'none';
+        }
+        
+        // 检验设置按钮点击事件
+        document.querySelectorAll('.setting-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.textContent.includes('不良品')) {
+                    // 点击不良品按钮跳转到不良品类型选择页面
+                    window.location.href = 'defect_type_selection.html';
+                } else {
+                    // 移除所有按钮的选中状态
+                    document.querySelectorAll('.setting-btn').forEach(b => {
+                        b.classList.remove('good');
+                        b.classList.add('bad');
+                    });
+                    // 设置当前按钮为选中状态
+                    this.classList.remove('bad');
+                    this.classList.add('good');
+                }
+            });
+        });
+        
+        // 扫描按钮点击事件
+        document.querySelector('.scan-btn').addEventListener('click', function() {
+            alert('开始扫描产品VSN码');
+            // 实际项目中这里会启动摄像头或扫码器
+        });
+        
+        // 搜索框输入事件
+        document.querySelector('.search-input').addEventListener('input', function() {
+            const searchText = this.value;
+            if (searchText.length > 0) {
+                console.log('搜索产品:', searchText);
+                // 实际项目中这里会发送搜索请求并显示结果
+            }
+        });
+        
+        // 删除按钮点击事件
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (confirm('确定要删除该品检项吗？')) {
+                    const inspectionItem = this.closest('.inspection-item');
+                    if (inspectionItem) {
+                        inspectionItem.remove();
+                        alert('品检项删除成功');
+                        // 更新统计信息
+                        updateStats();
+                    }
+                }
+            });
+        });
+        
+        // 产品明细打印按钮点击事件（打印条码）
+        document.querySelectorAll('.vsn-table .print-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const row = this.closest('tr');
+                const vsn = row.querySelector('td:first-child')?.textContent || '';
+                const supplier = '东莞市远豪五金制品有限公司';
+                const productCode = 'CM3-63008-02';
+                
+                if (needPrintBarcode(supplier, productCode)) {
+                    alert(`打印条码成功！\nVSN: ${vsn}`);
+                } else {
+                    alert('同一供应商同一产品当月已入库过，无需打码');
+                }
+            });
+        });
+        
+        // 判断是否需要打码（同一供应商同一产品当月第一次入库需要打码）
+        function needPrintBarcode(supplier, productCode) {
+            const key = `${supplier}_${productCode}_${getCurrentMonth()}`;
+            const printed = localStorage.getItem(key);
+            if (!printed) {
+                localStorage.setItem(key, 'true');
+                return true;
+            }
+            return false;
+        }
+        
+        // 获取当前月份（格式：YYYY-MM）
+        function getCurrentMonth() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+        
+        // 添加商品按钮点击事件
+        document.querySelector('.add-item-btn').addEventListener('click', function() {
+            alert('添加商品');
+            // 实际项目中这里会打开添加商品界面
+        });
+        
+        // 为所有print-btn添加点击事件
+        document.querySelectorAll('.print-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.textContent === '打印单据') {
+                    // 操作区域的打印单据按钮
+                    alert('打印品检单');
+                    window.print();
+                } else {
+                    // 物料项的打印图标按钮
+                    alert('打印标签');
+                }
+            });
+        });
+        
+        // 提交结果按钮点击事件
+        document.querySelector('.submit-btn').addEventListener('click', function() {
+            alert('提交结果成功');
+            // 跳转到已完成品检单页面
+            window.location.href = 'completed_inspection.html';
+        });
+        
+        // 更新统计信息
+        function updateStats() {
+            const inspectionItems = document.querySelectorAll('.inspection-item');
+            const totalCount = inspectionItems.length;
+            
+            // 模拟统计数据
+            const goodCount = Math.floor(totalCount * 0.9);
+            const badCount = totalCount - goodCount;
+            const passRate = Math.round((goodCount / totalCount) * 100);
+            const failRate = 100 - passRate;
+            
+            // 更新统计区域
+            const statsSection = document.querySelector('.stats-section');
+            if (statsSection) {
+                const statsValues = statsSection.querySelectorAll('.stats-value');
+                if (statsValues.length >= 5) {
+                    statsValues[0].textContent = totalCount * 55; // 假设每个品检项平均55个
+                    statsValues[1].textContent = goodCount * 55;
+                    statsValues[2].textContent = badCount * 55;
+                    statsValues[3].textContent = passRate + '%';
+                    statsValues[4].textContent = failRate + '%';
+                }
+            }
+        }
+        
+        // 初始化统计信息
+        updateStats();
+    </script>
+</body>
+</html>

@@ -1,0 +1,2188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>发回工厂单</title>
+    <!-- Ant Design Mobile CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/antd-mobile/5.32.0/antd-mobile.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* 左侧导航栏 */
+        .sidebar {
+            width: 80px;
+            background-color: #fff;
+            border-right: 1px solid #e8e8e8;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 0;
+        }
+        
+        .sidebar-item {
+            padding: 16px 8px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+        
+        .sidebar-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .sidebar-item.active {
+            background-color: #e6f7ff;
+            border-left-color: #1890ff;
+            color: #1890ff;
+        }
+        
+        .sidebar-title {
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+        
+        /* 右侧主体区 */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        
+        /* 机型切换 */
+        .device-switch {
+            margin-bottom: 20px;
+        }
+        
+        /* 方框容器 */
+        .phone-container {
+            width: 414px;
+            height: 100vh;
+            max-height: 896px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 方框屏幕 */
+        .phone-screen {
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+        }
+        
+        /* 页面样式 */
+        .page {
+            display: none;
+            min-height: 100%;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* 头部 */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            border-bottom: 1px solid #e8e8e8;
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .header-button {
+            font-size: 14px;
+            color: #007aff;
+            cursor: pointer;
+        }
+        
+        /* 信息区域 */
+        .info-section {
+            padding: 16px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+        
+        .info-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        /* 输入框样式 */
+        .info-input {
+            flex: 1;
+            text-align: right;
+        }
+        
+        .info-input input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        /* 下拉选择框 */
+        .info-select select {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background-color: #fff;
+        }
+        
+        /* 扫描区域 */
+        .scan-section {
+            padding: 16px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        .scan-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .scan-input-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .scan-input {
+            flex: 1;
+        }
+        
+        .scan-input input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .add-button {
+            background-color: #007aff;
+            color: #fff;
+            padding: 0 16px;
+            border-radius: 6px;
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .scan-tip {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 12px;
+        }
+        
+        /* 退货明细 */
+        .return-section {
+            padding: 16px;
+        }
+        
+        .return-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .return-item {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .return-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .return-id {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #007aff;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 12px;
+        }
+        
+        .return-info {
+            flex: 1;
+        }
+        
+        .return-info p {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .return-info p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .product-image {
+            width: 80px;
+            height: 60px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        
+        .quantity-section {
+            margin: 12px 0;
+        }
+        
+        .quantity-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .quantity-label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .quantity-input {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        
+        .quantity-button {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .quantity-value {
+            width: 60px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 4px;
+            font-size: 14px;
+        }
+        
+        .detail-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+        }
+        
+        .detail-table th,
+        .detail-table td {
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-table th {
+            color: #666;
+        }
+        
+        .detail-table td {
+            font-weight: 500;
+        }
+        
+        .action-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        
+        .action-btn {
+            padding: 4px 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .modify-btn {
+            background-color: #e6f7ff;
+            color: #007aff;
+        }
+        
+        /* 添加更多产品 */
+        .add-more-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            border: 1px dashed #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .add-more-section button {
+            background: none;
+            border: none;
+            color: #007aff;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* 汇总信息 */
+        .summary-section {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        
+        .summary-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .summary-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* 打印按钮区域 */
+        .print-section {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .print-button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background-color: #fff;
+            color: #007aff;
+        }
+        
+        .total-quantity {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 14px;
+            font-weight: 600;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* 操作按钮 */
+        .action-section {
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .cancel-button {
+            background-color: #fff;
+            color: #666;
+        }
+        
+        .submit-button {
+            background-color: #007aff;
+            color: #fff;
+            border: none;
+        }
+        
+        /* 需求/实际占比区域 */
+        .ratio-section {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            background-color: #f9f9f9;
+        }
+        
+        .ratio-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+        
+        .ratio-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .ratio-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        /* 设置页面 */
+        .settings-section {
+            padding: 16px;
+        }
+        
+        .settings-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .settings-item:last-child {
+            border-bottom: none;
+        }
+        
+        .settings-label {
+            font-size: 14px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: #007aff;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧导航栏 -->
+        <div class="sidebar">
+            <div class="sidebar-item active" data-page="return-order">
+                <div class="sidebar-title">发回工厂单</div>
+            </div>
+            <div class="sidebar-item" data-page="order-list">
+                <div class="sidebar-title">单据列表</div>
+            </div>
+
+            <div class="sidebar-item" data-page="settings">
+                <div class="sidebar-title">设置</div>
+            </div>
+        </div>
+        
+        <!-- 右侧主体区 -->
+        <div class="main">
+            <!-- 手机容器 -->
+        <div class="phone-container" id="phone-container">
+            <div class="phone-screen">
+                    <!-- 待审批发回工厂单页面 -->
+                    <div class="page" id="pending-return">
+                        <!-- 头部 -->
+                        <div class="header">
+                            <div onclick="navigateTo('order-list')" style="cursor: pointer;">
+                                <span>←</span>
+                            </div>
+                            <h1>发回工厂单</h1>
+                            <div class="header-right">
+                                <div class="header-button" onclick="alert('已保存为草稿')">保存为草稿</div>
+                                <div class="header-button" onclick="navigateTo('settings')">设置</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 订单信息 -->
+                        <div class="info-section">
+                            <div class="info-item">
+                                <span class="info-label">发货单号:</span>
+                                <span class="info-value">HPY-20260113-19932</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">单据日期:</span>
+                                <span class="info-value">2026年01月13日</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">需求日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">制单人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">部门:</span>
+                                <span class="info-value">内容中心/国内组</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货说明:</span>
+                                <span class="info-value">返回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货类型:</span>
+                                <span class="info-value">退回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发回类型:</span>
+                                <span class="info-value">门店直发</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货人:</span>
+                                <span class="info-value">收货中心</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货电话:</span>
+                                <span class="info-value">15196995358</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货地址:</span>
+                                <span class="info-value">四川省成都市双流县科学大道四段四街</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">退货单号:</span>
+                                <span class="info-value">XSD-TH260115102342</span>
+                            </div>
+
+                            <div class="info-item">
+                                <span class="info-label">备注:</span>
+                                <div class="info-input">
+                                    <input type="text" value="" placeholder="请输入备注" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 100%;">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 扫描产品条码 -->
+                        <div class="scan-section" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin: 16px; margin-bottom: 16px;">
+                            <div class="scan-title" style="display: flex; align-items: center; margin-bottom: 12px;">
+                                <span style="font-size: 20px; margin-right: 8px;">📱</span>
+                                扫描产品条码
+                                <button onclick="alert('打开扫描界面')" style="background-color: #9900ff; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 14px; cursor: pointer; font-weight: 600; margin-left: auto;">按实体键扫描</button>
+                            </div>
+                            <div class="scan-input-row" style="display: flex; gap: 12px;">
+                                <div class="scan-input" style="flex: 1;">
+                                    <input type="text" placeholder="搜索产品编码或名称" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                                </div>
+                                <button class="add-button" onclick="alert('产品已添加到退货明细')" style="background-color: #007aff; color: #fff; border: none; border-radius: 8px; padding: 0 16px; font-size: 14px; cursor: pointer; font-weight: 600;">添加</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 退货明细 -->
+                        <div class="return-section">
+                            <div class="return-title">退货明细</div>
+                            
+                            <!-- 添加更多产品 -->
+                            <div class="add-more-section" style="display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background-color: #f9f9f9; border-radius: 8px; margin: 16px 0;">
+                                <div style="width: 80px; height: 80px; background-color: #e8e8e8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <span style="font-size: 32px;">📦</span>
+                                </div>
+                                <div style="font-size: 14px; color: #666; text-align: center; margin-bottom: 8px;">请扫描或搜索物料添加到列表</div>
+                                <div style="font-size: 12px; color: #999; text-align: center;">已添加0个物料编码，0个VSN</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 汇总信息 -->
+                        <div class="summary-section">
+                            <div class="summary-item">
+                                <span class="summary-label">产品数量:</span>
+                                <span class="summary-value">0</span>
+                            </div>
+
+                        </div>
+                        
+                        <!-- 需求/实际占比区域 -->
+                    <div class="ratio-section">
+                        <div class="ratio-item">
+                            <span class="ratio-label">应退/实退:</span>
+                            <span class="ratio-value">0/0</span>
+                        </div>
+                    </div>
+                        
+                        <!-- 审批区域 -->
+                        <div class="approval-section" style="padding: 16px; border-top: 1px solid #e0e0e0; background-color: #f9f9f9;">
+                            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 16px;">
+                                <button onclick="selectApproval('agree')" style="padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px;" id="agree-btn">
+                                    <span>☑️</span> 同意
+                                </button>
+                                <button onclick="selectApproval('reject')" style="padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px;" id="reject-btn">
+                                    <span>❌</span> 拒绝
+                                </button>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">审批意见:</label>
+                                <textarea placeholder="请输入审批意见（非必填）" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; resize: none; min-height: 100px;"></textarea>
+                            </div>
+
+                        </div>
+                        
+                        <!-- 打印按钮区域 -->
+                        <div class="print-section" style="padding: 16px; border-top: 1px solid #e0e0e0; display: flex; gap: 12px;">
+                            <button class="print-button" onclick="window.open('发回工厂单打印预览.html', '_blank')" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; font-weight: 600; cursor: pointer; background-color: #fff; color: #007aff; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <span>🖨️</span> 打印
+                            </button>
+                            <button class="action-button submit-button" onclick="confirmApproval('agree')" style="flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center;">确认审批</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 发回工厂单页面 -->
+                    <div class="page active" id="return-order">
+                        <!-- 头部 -->
+                        <div class="header">
+                            <div onclick="navigateTo('order-list')" style="cursor: pointer;">
+                                <span>←</span>
+                            </div>
+                            <h1>发回工厂单</h1>
+                            <div class="header-right">
+                                <div class="header-button" onclick="alert('已保存为草稿')">保存为草稿</div>
+                                <div class="header-button" onclick="navigateTo('settings')">设置</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 订单信息 -->
+                        <div class="info-section">
+                            <div class="info-item">
+                                <span class="info-label">发货单号:</span>
+                                <span class="info-value">HPY-20260113-19932</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">单据日期:</span>
+                                <span class="info-value">2026年01月13日</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">需求日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">制单人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">部门:</span>
+                                <span class="info-value">内容中心/国内组</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货说明:</span>
+                                <span class="info-value">返回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货类型:</span>
+                                <span class="info-value">退回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发回类型:</span>
+                                <span class="info-value">门店直发</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货人:</span>
+                                <span class="info-value">收货中心</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货电话:</span>
+                                <span class="info-value">15196995358</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货地址:</span>
+                                <span class="info-value">四川省成都市双流县科学大道四段四街</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">退货单号:</span>
+                                <span class="info-value">XSD-TH260115102342</span>
+                            </div>
+
+                            <div class="info-item">
+                                <span class="info-label">备注:</span>
+                                <div class="info-input">
+                                    <input type="text" value="" placeholder="请输入备注" style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 100%;">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 扫描产品条码 -->
+                        <div class="scan-section" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin: 16px; margin-bottom: 16px;">
+                            <div class="scan-title" style="display: flex; align-items: center; margin-bottom: 12px;">
+                                <span style="font-size: 20px; margin-right: 8px;">📱</span>
+                                扫描产品条码
+                                <button onclick="alert('打开扫描界面')" style="background-color: #9900ff; color: #fff; border: none; border-radius: 6px; padding: 6px 12px; font-size: 14px; cursor: pointer; font-weight: 600; margin-left: auto;">按实体键扫描</button>
+                            </div>
+                            <div class="scan-input-row" style="display: flex; gap: 12px;">
+                                <div class="scan-input" style="flex: 1;">
+                                    <input type="text" placeholder="搜索产品编码或名称" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                                </div>
+                                <button class="add-button" onclick="alert('产品已添加到退货明细')" style="background-color: #007aff; color: #fff; border: none; border-radius: 8px; padding: 0 16px; font-size: 14px; cursor: pointer; font-weight: 600;">添加</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 退货明细 -->
+                        <div class="return-section">
+                            <div class="return-title">退货明细</div>
+                            <!-- 唯一码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">1</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: R[SG-5.01-E13-CH]</p>
+                                        <p style="margin-bottom: 4px;">产品名称: 智能手机</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 电子产品</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9900ff;">类型: 唯一码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">VSN</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">202601130001</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <select style="width: 100%; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px;">
+                                                    <option value="月付仓 - 工厂操作中心" selected>月付仓 - 工厂操作中心</option>
+                                                    <option value="总部良品仓">总部良品仓</option>
+                                                    <option value="总部不良品仓">总部不良品仓</option>
+                                                </select>
+                                            </td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                1
+                                            </td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <input type="text" value="" placeholder="请输入" style="width: 60px; text-align: center; border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px;">
+                                            </td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: pointer; font-size: 16px; color: #ff3b30;" onclick="alert('删除操作已触发')">🗑️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div style="text-align: right; margin-top: 8px;">
+                                    <span style="color: #007aff; cursor: pointer; font-size: 12px;" onclick="showVSNList('R[SG-5.01-E13-CH]', '智能手机')">查看全部VSN →</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 商品码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">2</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: CM3-63009-01</p>
+                                        <p style="margin-bottom: 4px;">产品名称: META3 中框铝合金组件-亮银色</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 手机配件</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9900ff;">类型: 商品码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <select style="width: 100%; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px; font-size: 12px;">
+                                                    <option value="月付仓 - 工厂操作中心" selected>月付仓 - 工厂操作中心</option>
+                                                    <option value="总部良品仓">总部良品仓</option>
+                                                    <option value="总部不良品仓">总部不良品仓</option>
+                                                </select>
+                                            </td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                48
+                                            </td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <input type="text" value="" placeholder="请输入" style="width: 60px; text-align: center; border: 1px solid #e0e0e0; border-radius: 4px; padding: 2px;">
+                                            </td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: pointer; font-size: 16px; color: #ff3b30;" onclick="alert('删除操作已触发')">🗑️</span>
+                                                <span style="cursor: pointer; font-size: 16px; color: #007aff; margin-left: 8px;" onclick="showPrintLabelDialog('CM3-63009-01', 'META3 中框铝合金组件-亮银色')">🖨️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- 添加更多产品 -->
+                            <div class="add-more-section" style="display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background-color: #f9f9f9; border-radius: 8px; margin: 16px 0;">
+                                <div style="width: 80px; height: 80px; background-color: #e8e8e8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <span style="font-size: 32px;">📦</span>
+                                </div>
+                                <div style="font-size: 14px; color: #666; text-align: center; margin-bottom: 8px;">请扫描或搜索物料添加到列表</div>
+                                <div style="font-size: 12px; color: #999; text-align: center;">已添加2个物料编码，1个VSN</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 汇总信息 -->
+                        <div class="summary-section">
+                            <div class="summary-item">
+                                <span class="summary-label">产品数量:</span>
+                                <span class="summary-value">1</span>
+                            </div>
+
+                        </div>
+                        
+                        <!-- 需求/实际占比区域 -->
+                    <div class="ratio-section">
+                        <div class="ratio-item">
+                            <span class="ratio-label">应退/实退:</span>
+                            <span class="ratio-value">49/2</span>
+                        </div>
+                    </div>
+                        
+                        <!-- 审批区域 -->
+                        <div class="approval-section" style="padding: 16px; border-top: 1px solid #e0e0e0; background-color: #f9f9f9;">
+                            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-bottom: 16px;">
+                                <button onclick="selectApproval('agree')" style="padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px;" id="agree-btn">
+                                    <span>☑️</span> 同意
+                                </button>
+                                <button onclick="selectApproval('reject')" style="padding: 6px 12px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 4px;" id="reject-btn">
+                                    <span>❌</span> 拒绝
+                                </button>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">审批意见:</label>
+                                <textarea placeholder="请输入审批意见（非必填）" style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; resize: none; min-height: 100px;"></textarea>
+                            </div>
+
+                        </div>
+                        
+                        <!-- 打印按钮区域 -->
+                        <div class="print-section" style="padding: 16px; border-top: 1px solid #e0e0e0; display: flex; gap: 12px;">
+                            <button class="print-button" onclick="window.open('发回工厂单打印预览.html', '_blank')" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; font-weight: 600; cursor: pointer; background-color: #fff; color: #007aff; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <span>🖨️</span> 打印
+                            </button>
+                            <button class="action-button submit-button" onclick="confirmApproval('agree')" style="flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center;">确认审批</button>
+                        </div>
+                        
+                        <script>
+                            function selectApproval(type) {
+                                if (type === 'agree') {
+                                    document.getElementById('agree-btn').style.backgroundColor = '#e6f7ff';
+                                    document.getElementById('agree-btn').style.borderColor = '#1890ff';
+                                    document.getElementById('reject-btn').style.backgroundColor = '#fff';
+                                    document.getElementById('reject-btn').style.borderColor = '#e0e0e0';
+                                } else if (type === 'reject') {
+                                    document.getElementById('reject-btn').style.backgroundColor = '#fff1f0';
+                                    document.getElementById('reject-btn').style.borderColor = '#ff4d4f';
+                                    document.getElementById('agree-btn').style.backgroundColor = '#fff';
+                                    document.getElementById('agree-btn').style.borderColor = '#e0e0e0';
+                                }
+                            }
+                            
+                            // 成功提示弹窗
+                            function showSuccessPopup(message, status) {
+                                const popup = document.createElement('div');
+                                popup.className = 'success-popup';
+                                popup.innerHTML = `
+                                    <div class="success-icon">✓</div>
+                                    <div class="success-message">提交成功</div>
+                                    <div class="success-submessage">${message}</div>
+                                `;
+                                document.body.appendChild(popup);
+                                
+                                // 2秒后消失
+                                setTimeout(() => {
+                                    popup.style.opacity = '0';
+                                    popup.style.transition = 'opacity 0.5s ease';
+                                    setTimeout(() => {
+                                        document.body.removeChild(popup);
+                                    }, 500);
+                                }, 2000);
+                            }
+                            
+                            function confirmApproval(type) {
+                                if (type === 'agree') {
+                                    if (confirm('确定要同意并确认审批吗？')) {
+                                        // 显示成功弹窗
+                                        showSuccessPopup();
+                                        
+                                        // 立即导航到已确认页面
+                                        navigateTo('detail-page');
+                                    }
+                                } else if (type === 'reject') {
+                                    if (confirm('确定要驳回并确认审批吗？')) {
+                                        // 显示成功弹窗
+                                        showSuccessPopup();
+                                        
+                                        // 立即导航到已驳回页面
+                                        navigateTo('rejected-page');
+                                    }
+                                }
+                            }
+                            
+                            function showVSNList(productCode, productName) {
+                                // 创建VSN列表弹窗
+                                const dialog = document.createElement('div');
+                                dialog.style.display = 'flex';
+                                dialog.style.position = 'fixed';
+                                dialog.style.top = '0';
+                                dialog.style.left = '0';
+                                dialog.style.width = '100%';
+                                dialog.style.height = '100%';
+                                dialog.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                                dialog.style.zIndex = '1000';
+                                dialog.style.alignItems = 'center';
+                                dialog.style.justifyContent = 'center';
+                                
+                                dialog.innerHTML = `
+                                    <div style="background-color: #fff; border-radius: 8px; padding: 24px; width: 90%; max-width: 400px; max-height: 80%; overflow-y: auto;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                            <h3 style="font-size: 18px; font-weight: 600;">VSN列表</h3>
+                                            <span onclick="this.parentElement.parentElement.parentElement.remove()" style="cursor: pointer; font-size: 24px;">×</span>
+                                        </div>
+                                        <div style="background-color: #f0f9ff; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                                            <div style="font-weight: 600; margin-bottom: 4px;">${productName}</div>
+                                            <div style="font-size: 12px; color: #666;">物料编码: ${productCode} | 应检数量: 200</div>
+                                        </div>
+                                        <div style="margin-bottom: 16px;">
+                                            <input type="text" placeholder="搜索VSN码" style="width: 100%; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                                        </div>
+                                        <div style="margin-bottom: 16px;">
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">共200条记录，当前显示第1-20条</div>
+                                            <table style="width: 100%; border-collapse: collapse; border: 1px solid #e0e0e0;">
+                                                <thead>
+                                                    <tr style="background-color: #f5f5f5;">
+                                                        <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border: 1px solid #e0e0e0;">序号</th>
+                                                        <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border: 1px solid #e0e0e0;">VSN</th>
+                                                        <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border: 1px solid #e0e0e0;">库位</th>
+                                                        <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border: 1px solid #e0e0e0;">良品数量</th>
+                                                        <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border: 1px solid #e0e0e0;">操作</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${Array.from({ length: 20 }, (_, i) => `
+                                                        <tr>
+                                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border: 1px solid #e0e0e0;">${i + 1}</td>
+                                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border: 1px solid #e0e0e0;">V${String(i + 1).padStart(8, '0')}</td>
+                                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border: 1px solid #e0e0e0;">LL-${Math.floor(Math.random() * 9) + 1}-${String(Math.floor(Math.random() * 9) + 1).padStart(2, '0')}</td>
+                                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border: 1px solid #e0e0e0;">1</td>
+                                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border: 1px solid #e0e0e0;">
+                                                                <span style="cursor: pointer; font-size: 16px; color: #007aff; margin-right: 8px;" onclick="alert('打印标签功能已触发')">🖨️</span>
+                                                                <span style="cursor: pointer; font-size: 16px; color: #ff3b30;" onclick="alert('删除操作已触发')">🗑️</span>
+                                                            </td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div style="display: flex; gap: 12px;">
+                                            <button onclick="this.parentElement.parentElement.parentElement.remove()" style="flex: 1; padding: 12px; background-color: #fff; color: #666; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">返回</button>
+                                            <button onclick="alert('确认操作已触发'); this.parentElement.parentElement.parentElement.remove()" style="flex: 1; padding: 12px; background-color: #007aff; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">确认</button>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                document.body.appendChild(dialog);
+                            }
+                        </script>
+                        
+
+                    </div>
+                    
+                    <!-- 单据列表页面 -->
+                    <div class="page" id="order-list">
+                        <!-- 头部 -->
+                        <div class="header">
+                            <div onclick="navigateTo('return-order')" style="cursor: pointer;">
+                                <span>←</span>
+                            </div>
+                            <h1>发回工厂单列表</h1>
+                            <div></div>
+                        </div>
+                        
+                        <!-- 搜索和操作 -->
+                        <div style="padding: 16px;">
+                            <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 16px;">
+                                <div style="display: flex; gap: 8px; align-items: center;">
+                                    <input type="text" placeholder="输入单据编号/VSN进行检索" style="width: 150px; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                                    <select style="padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                                        <option>排序</option>
+                                        <option>创建时间倒序</option>
+                                        <option>创建时间正序</option>
+                                    </select>
+                                    <select style="padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 6px; font-size: 14px;">
+                                        <option>筛选</option>
+                                        <option>待审批</option>
+                                        <option>已确认</option>
+                                        <option>已取消</option>
+                                        <option>已驳回</option>
+                                        <option>草稿</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <!-- 统计信息 -->
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 12px; color: #666;">
+                                <span>今日数量: 20000</span>
+                                <span>今日单据数量: 15</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 单据列表 -->
+                        <div style="padding: 0 16px;">
+                            <!-- 待审批单据项 -->
+                            <div style="background-color: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer;" onclick="navigateToPendingReturn('HPY-20260113-19932')">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600; font-size: 16px;">HPY-20260113-19932</span>
+                                    <span style="padding: 2px 8px; border-radius: 12px; background-color: #fffbe6; color: #faad14; font-size: 12px;">待审批</span>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">作业类型: 退回工厂</div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">创建时间: 2026-01-13 10:30:00</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                                    <span style="font-size: 12px; color: #999;">制单人: 李晓华</span>
+                                    <div>
+                                        <span style="font-size: 12px; color: #007aff; cursor: pointer;" onclick="event.stopPropagation(); window.open('发回工厂单打印预览.html', '_blank')">打印</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 已驳回单据项 -->
+                            <div style="background-color: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer;" onclick="navigateTo('rejected-page')">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600; font-size: 16px;">HPY-20260112-19931</span>
+                                    <span style="padding: 2px 8px; border-radius: 12px; background-color: #fff1f0; color: #ff4d4f; font-size: 12px;">已驳回</span>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">作业类型: 退回工厂</div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">创建时间: 2026-01-12 15:20:00</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                                    <span style="font-size: 12px; color: #999;">制单人: 李晓华</span>
+                                    <div>
+                                        <span style="font-size: 12px; color: #007aff; cursor: pointer;" onclick="event.stopPropagation(); window.open('发回工厂单打印预览.html', '_blank')">打印</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 已确认单据项 -->
+                            <div style="background-color: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer;" onclick="navigateTo('detail-page')">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600; font-size: 16px;">HPY-20260112-19931</span>
+                                    <span style="padding: 2px 8px; border-radius: 12px; background-color: #f6ffed; color: #52c41a; font-size: 12px;">已确认</span>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">作业类型: 退回工厂</div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">创建时间: 2026-01-12 14:20:00</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                                    <span style="font-size: 12px; color: #999;">制单人: 李晓华</span>
+                                    <div>
+                                        <span style="font-size: 12px; color: #007aff; cursor: pointer;" onclick="event.stopPropagation(); window.open('发回工厂单打印预览.html', '_blank')">打印</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 已取消单据项 -->
+                            <div style="background-color: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer;" onclick="navigateTo('cancelled-page')">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600; font-size: 16px;">HPY-20260111-19930</span>
+                                    <span style="padding: 2px 8px; border-radius: 12px; background-color: #fff1f0; color: #ff4d4f; font-size: 12px;">已取消</span>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">作业类型: 退回工厂</div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">创建时间: 2026-01-11 09:15:00</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                                    <span style="font-size: 12px; color: #999;">制单人: 李晓华</span>
+                                    <div>
+                                        <span style="font-size: 12px; color: #007aff; cursor: pointer;" onclick="event.stopPropagation(); window.open('发回工厂单打印预览.html', '_blank')">打印</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- 草稿状态单据项 -->
+                            <div style="background-color: #fff; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer;" onclick="navigateTo('return-order')">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600; font-size: 16px;">HPY-20260110-19929</span>
+                                    <span style="padding: 2px 8px; border-radius: 12px; background-color: #f0f0f0; color: #999; font-size: 12px;">草稿</span>
+                                </div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">作业类型: 退回工厂</div>
+                                <div style="font-size: 12px; color: #666; margin-bottom: 4px;">创建时间: 2026-01-10 16:45:00</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px;">
+                                    <span style="font-size: 12px; color: #999;">制单人: 李晓华</span>
+                                    <div>
+                                        <span style="font-size: 12px; color: #007aff; cursor: pointer;" onclick="event.stopPropagation(); window.open('发回工厂单打印预览.html', '_blank')">打印</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 分页 -->
+                        <div style="display: flex; justify-content: center; align-items: center; padding: 16px; gap: 8px;">
+                            <button style="padding: 4px 8px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff; font-size: 12px; cursor: pointer;">上一页</button>
+                            <span style="font-size: 12px;">1 / 80</span>
+                            <button style="padding: 4px 8px; border: 1px solid #e0e0e0; border-radius: 4px; background-color: #fff; font-size: 12px; cursor: pointer;">下一页</button>
+                        </div>
+                        
+                        <!-- 底部新增按钮 -->
+                        <div style="padding: 16px; border-top: 1px solid #e8e8e8;">
+                            <button style="width: 100%; padding: 12px; background-color: #007aff; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;" onclick="navigateTo('return-order')">+ 新建发回工厂单</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 详情页面 -->
+                    <div class="page" id="detail-page">
+                        <!-- 头部 -->
+                        <div class="header">
+                            <div onclick="navigateTo('order-list')" style="cursor: pointer;">
+                                <span>←</span>
+                            </div>
+                            <h1>发回工厂单详情</h1>
+                            <div></div>
+                        </div>
+                        
+                        <!-- 订单信息 -->
+                        <div class="info-section">
+                            <div class="info-item">
+                                <span class="info-label">发货单号:</span>
+                                <span class="info-value">HPY-20260113-19932</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">单据日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">需求日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">制单人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">部门:</span>
+                                <span class="info-value">内容中心/国内组</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货说明:</span>
+                                <span class="info-value">返回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货类型:</span>
+                                <span class="info-value">退回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发回类型:</span>
+                                <span class="info-value">门店直发</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货人:</span>
+                                <span class="info-value">收货中心</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货电话:</span>
+                                <span class="info-value">15196995358</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">退货单号:</span>
+                                <span class="info-value">XSD-TH260115102342</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货地址:</span>
+                                <span class="info-value">四川省成都市双流县科学大道四段四街</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">备注:</span>
+                                <span class="info-value"></span>
+                            </div>
+                        </div>
+                        
+
+                        
+                        <!-- 退货明细 -->
+                        <div class="return-section">
+                            <div class="return-title">退货明细</div>
+                            <!-- 唯一码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">1</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: R[SG-5.01-E13-CH]</p>
+                                        <p style="margin-bottom: 4px;">产品名称: 智能手机</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 电子产品</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9900ff;">类型: 唯一码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">VSN</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">202601130001</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">月付仓 - 工厂操作中心</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">1</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">1</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999;">🗑️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div style="text-align: right; margin-top: 8px;">
+                                    <span style="color: #007aff; cursor: pointer; font-size: 12px; cursor: not-allowed; opacity: 0.6;">查看全部VSN →</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 商品码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">2</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: CM3-63009-01</p>
+                                        <p style="margin-bottom: 4px;">产品名称: META3 中框铝合金组件-亮银色</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 手机配件</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9900ff;">类型: 商品码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">月付仓 - 工厂操作中心</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">48</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">48</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999;">🗑️</span>
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999; margin-left: 8px;">🖨️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- 添加更多产品 -->
+                            <div class="add-more-section" style="display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background-color: #f9f9f9; border-radius: 8px; margin: 16px 0;">
+                                <div style="width: 80px; height: 80px; background-color: #e8e8e8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <span style="font-size: 32px;">📦</span>
+                                </div>
+                                <div style="font-size: 14px; color: #666; text-align: center; margin-bottom: 8px;">请扫描或搜索物料添加到列表</div>
+                                <div style="font-size: 12px; color: #999; text-align: center;">已添加2个物料编码，1个VSN</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 汇总信息 -->
+                        <div class="summary-section">
+                            <div class="summary-item">
+                                <span class="summary-label">产品数量:</span>
+                                <span class="summary-value">1</span>
+                            </div>
+
+                        </div>
+                        
+                        <!-- 需求/实际占比区域 -->
+                        <div class="ratio-section">
+                            <div class="ratio-item">
+                                <span class="ratio-label">应退/实退:</span>
+                                <span class="ratio-value">49/2</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 打印按钮区域 -->
+                        <div class="print-section" style="padding: 16px; border-top: 1px solid #e0e0e0; display: flex; gap: 12px;">
+                            <button class="print-button" onclick="window.open('发回工厂单打印预览.html', '_blank')" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; font-weight: 600; cursor: pointer; background-color: #fff; color: #007aff; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <span>🖨️</span> 打印
+                            </button>
+                            <button class="action-button submit-button" style="flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: not-allowed; background-color: #d9d9d9; color: #fff; display: flex; align-items: center; justify-content: center;">已确认</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 已驳回页面 -->
+                    <div class="page" id="rejected-page">
+                        <!-- 头部 -->
+                        <div class="header">
+                            <div onclick="navigateTo('order-list')" style="cursor: pointer;">
+                                <span>←</span>
+                            </div>
+                            <h1>发回工厂单详情</h1>
+                            <div></div>
+                        </div>
+                        
+                        <!-- 订单信息 -->
+                        <div class="info-section">
+                            <div class="info-item">
+                                <span class="info-label">发货单号:</span>
+                                <span class="info-value">HPY-20260113-19933</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">单据日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">需求日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">制单人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">部门:</span>
+                                <span class="info-value">内容中心/国内组</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货说明:</span>
+                                <span class="info-value">返回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货类型:</span>
+                                <span class="info-value">退回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发回类型:</span>
+                                <span class="info-value">门店直发</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货人:</span>
+                                <span class="info-value">收货中心</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货电话:</span>
+                                <span class="info-value">15196995358</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">退货单号:</span>
+                                <span class="info-value">XSD-TH260115102343</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货地址:</span>
+                                <span class="info-value">四川省成都市双流县科学大道四段四街</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">备注:</span>
+                                <span class="info-value"></span>
+                            </div>
+                        </div>
+                        
+
+                        
+                        <!-- 退货明细 -->
+                        <div class="return-section">
+                            <div class="return-title">退货明细</div>
+                            <!-- 唯一码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">1</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: R[SG-5.01-E13-CH]</p>
+                                        <p style="margin-bottom: 4px;">产品名称: 智能手机</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 电子产品</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9900ff;">类型: 唯一码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">VSN</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">202601130001</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">月付仓 - 工厂操作中心</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">1</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">1</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999;">🗑️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div style="text-align: right; margin-top: 8px;">
+                                    <span style="color: #007aff; cursor: pointer; font-size: 12px; cursor: not-allowed; opacity: 0.6;">查看全部VSN →</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 商品码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">2</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: CM3-63009-01</p>
+                                        <p style="margin-bottom: 4px;">产品名称: META3 中框铝合金组件-亮银色</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 手机配件</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9900ff;">类型: 商品码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">月付仓 - 工厂操作中心</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">48</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">48</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999;">🗑️</span>
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999; margin-left: 8px;">🖨️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- 添加更多产品 -->
+                            <div class="add-more-section" style="display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background-color: #f9f9f9; border-radius: 8px; margin: 16px 0;">
+                                <div style="width: 80px; height: 80px; background-color: #e8e8e8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <span style="font-size: 32px;">📦</span>
+                                </div>
+                                <div style="font-size: 14px; color: #666; text-align: center; margin-bottom: 8px;">请扫描或搜索物料添加到列表</div>
+                                <div style="font-size: 12px; color: #999; text-align: center;">已添加2个物料编码，1个VSN</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 汇总信息 -->
+                        <div class="summary-section">
+                            <div class="summary-item">
+                                <span class="summary-label">产品数量:</span>
+                                <span class="summary-value">1</span>
+                            </div>
+
+                        </div>
+                        
+                        <!-- 需求/实际占比区域 -->
+                        <div class="ratio-section">
+                            <div class="ratio-item">
+                                <span class="ratio-label">应退/实退:</span>
+                                <span class="ratio-value">49/2</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 打印按钮区域 -->
+                        <div class="print-section" style="padding: 16px; border-top: 1px solid #e0e0e0; display: flex; gap: 12px;">
+                            <button class="print-button" onclick="window.open('发回工厂单打印预览.html', '_blank')" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; font-weight: 600; cursor: pointer; background-color: #fff; color: #007aff; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <span>🖨️</span> 打印
+                            </button>
+                            <button class="action-button submit-button" style="flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: not-allowed; background-color: #d9d9d9; color: #fff; display: flex; align-items: center; justify-content: center;">已驳回</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 已取消页面 -->
+                    <div class="page" id="cancelled-page">
+                        <!-- 头部 -->
+                        <div class="header">
+                            <div onclick="navigateTo('order-list')" style="cursor: pointer;">
+                                <span>←</span>
+                            </div>
+                            <h1>发回工厂单详情</h1>
+                            <div></div>
+                        </div>
+                        
+                        <!-- 订单信息 -->
+                        <div class="info-section">
+                            <div class="info-item">
+                                <span class="info-label">发货单号:</span>
+                                <span class="info-value">HPY-20260113-19934</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">单据日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">需求日期:</span>
+                                <span class="info-value">2026-01-13</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">制单人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">部门:</span>
+                                <span class="info-value">内容中心/国内组</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货说明:</span>
+                                <span class="info-value">返回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货人:</span>
+                                <span class="info-value">李晓华</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发货类型:</span>
+                                <span class="info-value">退回工厂</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">发回类型:</span>
+                                <span class="info-value">门店直发</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货人:</span>
+                                <span class="info-value">收货中心</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货电话:</span>
+                                <span class="info-value">15196995358</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">退货单号:</span>
+                                <span class="info-value">XSD-TH260115102344</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">收货地址:</span>
+                                <span class="info-value">四川省成都市双流县科学大道四段四街</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">备注:</span>
+                                <span class="info-value"></span>
+                            </div>
+                        </div>
+                        
+
+                        
+                        <!-- 退货明细 -->
+                        <div class="return-section">
+                            <div class="return-title">退货明细</div>
+                            <!-- 唯一码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">1</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: R[SG-5.01-E13-CH]</p>
+                                        <p style="margin-bottom: 4px;">产品名称: 智能手机</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 电子产品</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9900ff;">类型: 唯一码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">VSN</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">202601130001</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">月付仓 - 工厂操作中心</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">1</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">1</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999;">🗑️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div style="text-align: right; margin-top: 8px;">
+                                    <span style="color: #007aff; cursor: pointer; font-size: 12px; cursor: not-allowed; opacity: 0.6;">查看全部VSN →</span>
+                                </div>
+                            </div>
+                            
+                            <!-- 商品码商品 -->
+                            <div class="return-item" style="background-color: #f0e6ff; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: flex-start; margin-bottom: 12px;">
+                                    <div class="return-id" style="width: 24px; height: 24px; border-radius: 50%; background-color: #007aff; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; margin-right: 12px;">2</div>
+                                    <div class="product-image" style="width: 80px; height: 60px; background-color: #e0e0e0; border-radius: 4px; margin: 0 12px 0 0; display: flex; align-items: center; justify-content: center; color: #999;">📱</div>
+                                    <div class="return-info" style="flex: 1;">
+                                        <p style="font-weight: 600; margin-bottom: 4px;">产品编码: CM3-63009-01</p>
+                                        <p style="margin-bottom: 4px;">产品名称: META3 中框铝合金组件-亮银色</p>
+                                        <p style="margin-bottom: 4px;">产品类别: 手机配件</p>
+                                        <p style="margin-bottom: 4px;">单位: 个</p>
+                                        <p style="margin-bottom: 4px; color: #9999ff;">类型: 商品码商品</p>
+                                    </div>
+                                </div>
+                                <table class="detail-table" style="width: 100%; border-collapse: collapse; margin: 12px 0;">
+                                    <thead>
+                                        <tr style="background-color: #f5f5f5;">
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">库位</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">发货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">收货确认数量</th>
+                                            <th style="padding: 8px; text-align: left; font-size: 12px; color: #666; border-bottom: 1px solid #f0f0f0;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">月付仓 - 工厂操作中心</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">48</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">48</td>
+                                            <td style="padding: 8px; text-align: left; font-size: 12px; font-weight: 500; border-bottom: 1px solid #f0f0f0;">
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999;">🗑️</span>
+                                                <span style="cursor: not-allowed; font-size: 16px; color: #999; margin-left: 8px;">🖨️</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <!-- 添加更多产品 -->
+                            <div class="add-more-section" style="display: flex; flex-direction: column; align-items: center; padding: 40px 20px; background-color: #f9f9f9; border-radius: 8px; margin: 16px 0;">
+                                <div style="width: 80px; height: 80px; background-color: #e8e8e8; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                                    <span style="font-size: 32px;">📦</span>
+                                </div>
+                                <div style="font-size: 14px; color: #666; text-align: center; margin-bottom: 8px;">请扫描或搜索物料添加到列表</div>
+                                <div style="font-size: 12px; color: #999; text-align: center;">已添加2个物料编码，1个VSN</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 汇总信息 -->
+                        <div class="summary-section">
+                            <div class="summary-item">
+                                <span class="summary-label">产品数量:</span>
+                                <span class="summary-value">1</span>
+                            </div>
+
+                        </div>
+                        
+                        <!-- 需求/实际占比区域 -->
+                        <div class="ratio-section">
+                            <div class="ratio-item">
+                                <span class="ratio-label">应退/实退:</span>
+                                <span class="ratio-value">49/2</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 打印按钮区域 -->
+                        <div class="print-section" style="padding: 16px; border-top: 1px solid #e0e0e0; display: flex; gap: 12px;">
+                            <button class="print-button" onclick="window.open('发回工厂单打印预览.html', '_blank')" style="flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #e0e0e0; font-size: 14px; font-weight: 600; cursor: pointer; background-color: #fff; color: #007aff; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <span>🖨️</span> 打印
+                            </button>
+                            <button class="action-button submit-button" style="flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: not-allowed; background-color: #d9d9d9; color: #fff; display: flex; align-items: center; justify-content: center;">已取消</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 打印确认页面 -->
+
+                    
+
+                    
+
+                    
+                    <!-- 打印标签弹窗 -->
+                    <div id="print-label-dialog" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                        <div style="background-color: #fff; border-radius: 8px; padding: 24px; width: 90%; max-width: 400px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                                <h3 style="font-size: 18px; font-weight: 600;">打印标签</h3>
+                                <span onclick="document.getElementById('print-label-dialog').style.display = 'none'" style="cursor: pointer; font-size: 24px;">×</span>
+                            </div>
+                            <div style="margin-bottom: 24px;">
+                                <div style="font-size: 14px; margin-bottom: 12px;">选择产品</div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 12px;">
+                                    <div>
+                                        <input type="checkbox" checked style="margin-right: 8px;">
+                                        <span id="label-product-name">[CM3-63009-01] META3 中框铝合金组件-亮银色</span>
+                                    </div>
+                                    <input type="number" value="1" min="1" style="width: 60px; padding: 4px; border: 1px solid #e0e0e0; border-radius: 4px;">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 24px;">
+                                <div style="font-size: 14px; margin-bottom: 12px;">二维码预览</div>
+                                <div style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; background-color: #f9f9f9;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                                        <div>
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">PJD:</div>
+                                            <div style="font-size: 14px; font-weight: 500;">PJD-20260115-10625</div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">ITEM:</div>
+                                            <div style="font-size: 14px; font-weight: 500;">CM3-63009-01</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                                        <div>
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">QTY:</div>
+                                            <div style="font-size: 14px; font-weight: 500;">1</div>
+                                        </div>
+                                        <div>
+                                            <div style="font-size: 12px; color: #666; margin-bottom: 4px;">VENDOR:</div>
+                                            <div style="font-size: 14px; font-weight: 500;">02388</div>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; justify-content: center;">
+                                        <div style="width: 100px; height: 100px; background-color: #e0e0e0; display: flex; align-items: center; justify-content: center; color: #999;">二维码</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px;">
+                                <button onclick="document.getElementById('print-label-dialog').style.display = 'none'" style="flex: 1; padding: 12px; background-color: #fff; color: #666; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">取消</button>
+                                <button onclick="alert('标签打印功能已触发'); document.getElementById('print-label-dialog').style.display = 'none'" style="flex: 1; padding: 12px; background-color: #007aff; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;">打印</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 设置页面 -->
+                    <div class="page" id="settings">
+                        <!-- 头部 -->
+                        <div class="header">
+                            <div onclick="navigateTo('return-order')" style="cursor: pointer;">
+                                <span>←</span>
+                            </div>
+                            <h1>设置</h1>
+                            <div></div>
+                        </div>
+                        
+                        <!-- 设置内容 -->
+                        <div class="settings-section">
+                            <div class="settings-title">字段显示设置</div>
+                            <div class="settings-item">
+                                <span class="settings-label">发货单号</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">单据日期</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">需求日期</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">制单人</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">部门</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">发货说明</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">发货类型</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">发回类型</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">收货人</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">收货电话</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">收货地址</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">退货单号</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">单据状态</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">物料编码</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">单位</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">类型</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">VSN</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">库位</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">发货数量</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <span class="settings-label">退货数量</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Ant Design Mobile JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/antd-mobile/5.32.0/antd-mobile.min.js"></script>
+    <script>
+        // 页面导航
+        function navigateTo(pageId) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            // 显示目标页面
+            document.getElementById(pageId).classList.add('active');
+            // 更新侧边栏选中状态
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.page === pageId) {
+                    item.classList.add('active');
+                }
+            });
+        }
+        
+        // 侧边栏点击事件
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.addEventListener('click', function() {
+                navigateTo(this.dataset.page);
+            });
+        });
+        
+        // 提交成功弹窗
+        function showSuccessPopup() {
+            // 创建弹窗元素
+            const popup = document.createElement('div');
+            popup.className = 'success-popup';
+            popup.innerHTML = `
+                <div class="success-icon">✓</div>
+                <div class="success-message">提交成功</div>
+                <div class="success-submessage">单据状态已更新</div>
+            `;
+            
+            // 添加到页面
+            document.body.appendChild(popup);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                popup.style.opacity = '0';
+                popup.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => {
+                    document.body.removeChild(popup);
+                }, 300);
+            }, 3000);
+        }
+        
+        // 滑动时标题跟随隐藏
+        let lastScrollTop = 0;
+        window.addEventListener('scroll', function() {
+            const headers = document.querySelectorAll('.header');
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            if (scrollTop > lastScrollTop && scrollTop > 100) {
+                // 向下滚动且超过100px，隐藏标题
+                headers.forEach(header => {
+                    header.classList.add('hidden');
+                });
+            } else {
+                // 向上滚动，显示标题
+                headers.forEach(header => {
+                    header.classList.remove('hidden');
+                });
+            }
+            lastScrollTop = scrollTop;
+        });
+        
+        // 机型切换
+        document.getElementById('ios-btn').addEventListener('click', function() {
+            document.getElementById('phone-container').classList.remove('android');
+            this.classList.add('ant-btn-primary');
+            document.getElementById('android-btn').classList.remove('ant-btn-primary');
+        });
+        
+        document.getElementById('android-btn').addEventListener('click', function() {
+            document.getElementById('phone-container').classList.add('android');
+            this.classList.add('ant-btn-primary');
+            document.getElementById('ios-btn').classList.remove('ant-btn-primary');
+        });
+        
+        // 发回类型选择
+        function selectReturnType(type) {
+            let typeElements = document.querySelectorAll('[onclick^="selectReturnType"]');
+            typeElements.forEach(element => {
+                element.style.backgroundColor = '#f5f5f5';
+                element.style.color = '#666';
+            });
+            event.target.style.backgroundColor = '#e6f7ff';
+            event.target.style.color = '#007aff';
+        }
+        
+        // 显示打印标签弹窗
+        function showPrintLabelDialog(productCode, productName) {
+            document.getElementById('label-product-name').textContent = `[${productCode}] ${productName}`;
+            document.getElementById('print-label-dialog').style.display = 'flex';
+        }
+        
+        // 关闭打印标签弹窗
+        function closePrintLabelDialog() {
+            document.getElementById('print-label-dialog').style.display = 'none';
+        }
+        
+        // 打印标签
+        function printLabel() {
+            alert('标签打印功能已触发');
+            closePrintLabelDialog();
+        }
+        
+        // 导航到详情页面
+        function navigateToDetail(orderId) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            // 显示详情页面
+            document.getElementById('detail-page').classList.add('active');
+        }
+        
+        // 导航到待审批发回工厂单页面
+        function navigateToPendingReturn(orderId) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            // 显示待审批页面
+            document.getElementById('pending-return').classList.add('active');
+        }
+        
+        // 退货数量控制
+        function decreaseQuantity(id) {
+            let input = document.getElementById('quantity-' + id);
+            let quantity = parseInt(input.value);
+            if (quantity > 1) {
+                input.value = quantity - 1;
+            }
+        }
+        
+        function increaseQuantity(id) {
+            let input = document.getElementById('quantity-' + id);
+            let quantity = parseInt(input.value);
+            input.value = quantity + 1;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>置换单</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background-color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .back-btn {
+            font-size: 24px;
+            margin-right: 16px;
+            cursor: pointer;
+        }
+        
+        .title {
+            flex: 1;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .menu-btn {
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .info-section {
+            padding: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        
+        .info-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .info-label {
+            color: #666;
+        }
+        
+        .info-value {
+            flex: 1;
+            text-align: right;
+            margin-left: 16px;
+        }
+        
+        .status {
+            background-color: #e8f5e8;
+            color: #388e3c;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+        
+        .material-list {
+            padding: 16px;
+        }
+        
+        .material-item {
+            margin-bottom: 12px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .material-item.completed {
+            background-color: #e8f5e8;
+        }
+        
+        .material-item-header {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background-color: #e8f5e8;
+        }
+        
+        .material-index {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 12px;
+            background-color: #388e3c;
+            color: white;
+        }
+        
+        .material-vsn {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .material-content {
+            padding: 12px;
+            background-color: white;
+        }
+        
+        .material-details {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .material-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 4px;
+        }
+        
+        .material-info-container {
+            flex: 1;
+        }
+        
+        .material-info {
+            font-size: 12px;
+            margin-bottom: 6px;
+            color: #666;
+        }
+        
+        .material-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            margin-bottom: 12px;
+            color: #666;
+        }
+        
+        .replacement-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 11px;
+            table-layout: fixed;
+        }
+        
+        .replacement-table th {
+            background-color: #f5f5f5;
+            padding: 6px 4px;
+            text-align: center;
+            border-bottom: 1px solid #e0e0e0;
+            font-weight: 500;
+            word-wrap: break-word;
+        }
+        
+        .replacement-table td {
+            padding: 8px 4px;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: center;
+            word-wrap: break-word;
+        }
+        
+        .replacement-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .replacement-table td select {
+            padding: 3px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 11px;
+            width: 100%;
+            max-width: 90px;
+        }
+        
+        .replacement-info {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .replacement-row {
+            flex: 1;
+            min-width: 45%;
+            display: flex;
+            flex-direction: column;
+            font-size: 12px;
+        }
+        
+        .replacement-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .replacement-label {
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .replacement-value {
+            color: #333;
+            font-weight: 500;
+        }
+        
+        .replacement-value.bad {
+            color: #c62828;
+        }
+        
+        .stats-section {
+            padding: 16px;
+            border-top: 1px solid #e0e0e0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .stats-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .stats-label {
+            color: #666;
+        }
+        
+        .stats-value {
+            font-weight: 500;
+        }
+        
+        .action-section {
+            padding: 16px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .action-button {
+            flex: 1;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .submit-btn {
+            background-color: #388e3c;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="back-btn" onclick="window.location.href='replacement_list.html'">←</div>
+            <div class="title">置换单</div>
+            <div class="menu-btn" onclick="openMenu()">⋮</div>
+        </div>
+        
+        <div class="info-section">
+            <div class="info-item">
+                <span class="info-label">置换单号:</span>
+                <span class="info-value">ZHD-20260115-001</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">置换申请日期:</span>
+                <span class="info-value">2026-01-15 16:11:48</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">申请人:</span>
+                <span class="info-value">张李莉</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">仓管人员:</span>
+                <span class="info-value">刘启兰</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">备注:</span>
+                <span class="info-value">无</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">单据状态:</span>
+                <span class="status">已完成</span>
+            </div>
+        </div>
+        
+        <div class="material-list">
+            <div class="material-item completed">
+                <div class="material-item-header">
+                    <div class="material-index">1</div>
+                    <div class="material-vsn">物料编码: CM3-63015</div>
+                </div>
+                <div class="material-content">
+                    <div class="material-details">
+                        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=metal%20camera%20cover%20accessory%20silver&image_size=square" alt="物料图片" class="material-image">
+                        <div class="material-info-container">
+                            <div class="material-info" style="color: #1976d2;">原明细号: SCL-20260114-27259</div>
+                            <div class="material-info">物料名称: META3-顶部装饰件组件-黑色-18K黄金V标</div>
+                            <div class="material-info">产品类别: 手机辅料</div>
+                            <div class="material-info">单位: 个</div>
+                            <div class="material-info" style="color: #9c27b0;">类型: 唯一码商品</div>
+                            <div class="material-stats">
+                                <span>置换数量: 1</span>
+                                <span>合格数量: 0</span>
+                                <span>不合格数量: 1</span>
+                            </div>
+                            <table class="replacement-table">
+                                <thead>
+                                    <tr>
+                                        <th>VSN</th>
+                                        <th>数量</th>
+                                        <th>不合格类型</th>
+                                        <th>新VSN</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <select style="font-family: monospace;">
+                                                <option value="V00000001" selected>V00000001</option>
+                                                <option value="V00000002">V00000002</option>
+                                                <option value="V00000003">V00000003</option>
+                                            </select>
+                                        </td>
+                                        <td>1</td>
+                                        <td>制成不合格</td>
+                                        <td>
+                                            <select style="font-family: monospace; color: #388e3c;">
+                                                <option value="V77777771" selected>V77777771</option>
+                                                <option value="V77777772">V77777772</option>
+                                                <option value="V77777773">V77777773</option>
+                                            </select>
+                                        </td>
+                                        <td>-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="replacement-info">
+                                <div class="replacement-row">
+                                    <span class="replacement-label">源位置</span>
+                                    <span class="replacement-value">A区/01货位</span>
+                                </div>
+                                <div class="replacement-row">
+                                    <span class="replacement-label">合格目的位置</span>
+                                    <span class="replacement-value">-</span>
+                                </div>
+                                <div class="replacement-row">
+                                    <span class="replacement-label">不合格目的位置</span>
+                                    <span class="replacement-value bad">不良品库/B柜</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="material-item completed">
+                <div class="material-item-header">
+                    <div class="material-index">2</div>
+                    <div class="material-vsn">物料编码: FLIP2-63005</div>
+                </div>
+                <div class="material-content">
+                    <div class="material-details">
+                        <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=mobile%20phone%20frame%20part%20metal&image_size=square" alt="物料图片" class="material-image">
+                        <div class="material-info-container">
+                            <div class="material-info" style="color: #1976d2;">原明细号: SCL-20260114-27260</div>
+                            <div class="material-info">物料名称: FLIP2-上盖V型金属装饰件组件-钛合金黑色</div>
+                            <div class="material-info">产品类别: 手机辅料</div>
+                            <div class="material-info">单位: 个</div>
+                            <div class="material-info" style="color: #ff9800;">类型: 商品码商品</div>
+                            <div class="material-stats">
+                                <span>置换数量: 10</span>
+                                <span>合格数量: 0</span>
+                                <span>不合格数量: 10</span>
+                            </div>
+                            <table class="replacement-table">
+                                <thead>
+                                    <tr>
+                                        <th>数量</th>
+                                        <th>不合格类型</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>10</td>
+                                        <td>库存不良</td>
+                                        <td>-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="replacement-info">
+                                <div class="replacement-row">
+                                    <span class="replacement-label">源位置</span>
+                                    <span class="replacement-value">C区/03货位</span>
+                                </div>
+                                <div class="replacement-row">
+                                    <span class="replacement-label">合格目的位置</span>
+                                    <span class="replacement-value">-</span>
+                                </div>
+                                <div class="replacement-row">
+                                    <span class="replacement-label">不合格目的位置</span>
+                                    <span class="replacement-value bad">不良品库/A柜</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats-section">
+            <div class="stats-row">
+                <span class="stats-label">总置换数:</span>
+                <span class="stats-value">11</span>
+            </div>
+            <div class="stats-row">
+                <span class="stats-label">合格数:</span>
+                <span class="stats-value">0</span>
+            </div>
+            <div class="stats-row">
+                <span class="stats-label">不合格数:</span>
+                <span class="stats-value" style="color: #c62828;">11</span>
+            </div>
+        </div>
+        
+        <div class="action-section">
+            <div class="action-buttons">
+                <div class="action-button submit-btn" onclick="printDocument()">打印单据</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function openMenu() {
+            alert('打开更多选项菜单');
+        }
+        
+        function printDocument() {
+            alert('打印置换单');
+            window.print();
+        }
+    </script>
+</body>
+</html>
