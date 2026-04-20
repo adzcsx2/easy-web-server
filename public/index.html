@@ -96,6 +96,14 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  margin: -4px -6px;
+  transition: background 0.2s;
+}
+.header-left:hover {
+  background: var(--bg);
 }
 
 .header-logo {
@@ -116,11 +124,6 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-.header-title:hover {
-  color: var(--primary);
 }
 
 .sidebar-toggle {
@@ -829,9 +832,9 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 <!-- ===== Header ===== -->
 <header class="header">
   <button class="sidebar-toggle" onclick="toggleSidebar()" title="菜单">&#9776;</button>
-  <div class="header-left">
+  <div class="header-left" onclick="navigateTo('')" title="返回根目录">
     <div class="header-logo">W</div>
-    <a class="header-title" onclick="navigateTo('')" title="返回根目录">Web 文件管理</a>
+    <span class="header-title">Web 文件管理</span>
   </div>
   <div class="header-center">
     <button class="btn-back" id="backBtn" onclick="goBack()" title="返回上级目录">&#8592;</button>
@@ -1106,6 +1109,7 @@ function navigateTo(path) {
 function goBack() {
   if (!currentPath) return;
   const segments = currentPath.split('/');
+  if (segments.length <= 1) return;
   segments.pop();
   navigateTo(segments.join('/'));
 }
@@ -1130,16 +1134,13 @@ window.addEventListener('popstate', () => {
 function renderBreadcrumb() {
   const el = document.getElementById('breadcrumb');
   const backBtn = document.getElementById('backBtn');
-  if (backBtn) backBtn.disabled = !currentPath;
+  if (backBtn) backBtn.disabled = !currentPath || currentPath.split('/').length <= 1;
   const segments = currentPath ? currentPath.split('/') : [];
   let html = '';
-  // Root
-  const rootActive = segments.length === 0 ? ' active' : '';
-  html += `<a class="breadcrumb-item${rootActive}" onclick="navigateTo('')">&#128193; 根目录</a>`;
   let pathSoFar = '';
   segments.forEach((seg, i) => {
     pathSoFar += (pathSoFar ? '/' : '') + seg;
-    html += '<span class="breadcrumb-sep">/</span>';
+    if (i > 0) html += '<span class="breadcrumb-sep">/</span>';
     const isLast = i === segments.length - 1;
     const activeClass = isLast ? ' active' : '';
     html += `<a class="breadcrumb-item${activeClass}" onclick="navigateTo('${pathSoFar}')">${seg}</a>`;
