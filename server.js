@@ -22,7 +22,7 @@ const SSE_POLL_INTERVAL = 500; // 500ms
 const MAX_VIEW_FILE_SIZE = 5 * 1024 * 1024; // 5MB - maximum file size for text viewing
 const TEXT_FILE_EXTENSIONS = [
   'md', 'txt', 'json', 'xml', 'yaml', 'yml', 'js', 'jsx', 'ts', 'tsx',
-  'css', 'scss', 'less', 'html', 'htm', 'py', 'java', 'go', 'rs', 'c',
+  'css', 'scss', 'less', 'py', 'java', 'go', 'rs', 'c',
   'cpp', 'h', 'hpp', 'sh', 'bash', 'zsh', 'php', 'rb', 'swift', 'kt',
   'sql', 'csv', 'tsv', 'ini', 'toml', 'conf', 'config', 'log', 'markdown',
   'rest', 'graphql', 'vue', 'svelte'
