@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Web 文件管理</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23155eef'/%3E%3Cstop offset='1' stop-color='%234f8eff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='16' y='16' text-anchor='middle' dominant-baseline='central' fill='white' font-family='system-ui,sans-serif' font-size='18' font-weight='700'%3EW%3C/text%3E%3C/svg%3E">
 <style>
 /* ===== CSS Variables ===== */
 :root {
@@ -115,6 +116,11 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.header-title:hover {
+  color: var(--primary);
 }
 
 .sidebar-toggle {
@@ -685,6 +691,52 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   gap: 8px;
 }
 
+/* Upload Modal specific styles */
+.upload-modal .modal {
+  max-width: 520px;
+}
+
+.upload-dropzone {
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 40px 20px;
+  text-align: center;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  margin-bottom: 16px;
+  position: relative;
+  background: var(--bg);
+}
+
+.upload-dropzone:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.upload-dropzone.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 4px rgba(21,94,239,0.12);
+}
+
+.upload-dropzone-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.upload-dropzone-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.upload-dropzone-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 /* ===== Sidebar Overlay (mobile) ===== */
 .sidebar-overlay {
   position: fixed;
@@ -779,7 +831,7 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   <button class="sidebar-toggle" onclick="toggleSidebar()" title="菜单">&#9776;</button>
   <div class="header-left">
     <div class="header-logo">W</div>
-    <span class="header-title">Web 文件管理</span>
+    <a class="header-title" onclick="navigateTo('')" title="返回根目录">Web 文件管理</a>
   </div>
   <div class="header-center">
     <button class="btn-back" id="backBtn" onclick="goBack()" title="返回上级目录">&#8592;</button>
@@ -813,7 +865,7 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 
   <!-- Content -->
   <div class="content" id="contentArea">
-    <div class="drop-overlay-text">松开以上传文件</div>
+    <div class="drop-overlay-text">松开以上传文件/文件夹</div>
 
     <!-- Upload Progress -->
     <div class="upload-panel" id="uploadPanel" style="display:none;">
@@ -847,7 +899,7 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
       <div class="empty-state" id="emptyState" style="display:none;">
         <div class="empty-state-icon">&#128193;</div>
         <div class="empty-state-title">此文件夹为空</div>
-        <div class="empty-state-desc">拖拽文件到此处上传，或点击右上角上传按钮</div>
+        <div class="empty-state-desc">拖拽文件或文件夹到此处上传，或点击右上角上传按钮</div>
       </div>
     </div>
   </div>
@@ -882,6 +934,25 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeNewFolderModal()">取消</button>
       <button class="btn btn-primary" onclick="confirmNewFolder()">创建</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Upload Modal ===== -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal upload-modal">
+    <div class="modal-header">
+      <div class="modal-title">上传文件</div>
+    </div>
+    <div class="modal-body">
+      <div class="upload-dropzone" id="uploadDropzone">
+        <div class="upload-dropzone-icon">&#128194;</div>
+        <div class="upload-dropzone-title">拖拽文件或文件夹到此处</div>
+        <div class="upload-dropzone-desc">或点击选择文件/文件夹</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeUploadModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -951,7 +1022,7 @@ function isTextFile(filename) {
   const ext = filename.split('.').pop().toLowerCase();
   const textExtensions = [
     'md', 'txt', 'json', 'xml', 'yaml', 'yml', 'js', 'jsx', 'ts', 'tsx',
-    'css', 'scss', 'less', 'html', 'htm', 'py', 'java', 'go', 'rs', 'c',
+    'css', 'scss', 'less', 'py', 'java', 'go', 'rs', 'c',
     'cpp', 'h', 'hpp', 'sh', 'bash', 'zsh', 'php', 'rb', 'swift', 'kt',
     'sql', 'csv', 'tsv', 'ini', 'toml', 'conf', 'config', 'log', 'markdown',
     'rest', 'graphql', 'vue', 'svelte'
@@ -1276,7 +1347,76 @@ async function confirmNewFolder() {
 
 /* ===== Upload ===== */
 function triggerUpload() {
-  document.getElementById('fileInput').click();
+  document.getElementById('uploadModal').classList.add('active');
+}
+
+function closeUploadModal() {
+  document.getElementById('uploadModal').classList.remove('active');
+}
+
+function setupUploadModalDrop() {
+  const dropzone = document.getElementById('uploadDropzone');
+  let modalDragCounter = 0;
+
+  // 点击 dropzone 直接打开文件选择器（支持文件和文件夹）
+  dropzone.addEventListener('click', () => {
+    document.getElementById('fileInput').click();
+  });
+
+  dropzone.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    modalDragCounter++;
+    dropzone.classList.add('drag-over');
+  });
+
+  dropzone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    modalDragCounter--;
+    if (modalDragCounter === 0) {
+      dropzone.classList.remove('drag-over');
+    }
+  });
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  dropzone.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    modalDragCounter = 0;
+    dropzone.classList.remove('drag-over');
+
+    const items = e.dataTransfer.items;
+    if (items && items.length && typeof items[0].webkitGetAsEntry === 'function') {
+      const entries = [];
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+      if (entries.length) {
+        const files = await collectFilesFromEntries(entries);
+        if (files.length) {
+          const hasRelativePath = files.some(f => f.webkitRelativePath);
+          if (hasRelativePath) {
+            queueFolderUploads(files);
+          } else {
+            queueUploads(files);
+          }
+          closeUploadModal();
+        }
+      }
+    } else {
+      const files = e.dataTransfer.files;
+      if (files && files.length) {
+        queueUploads(Array.from(files));
+        closeUploadModal();
+      }
+    }
+  });
 }
 
 function handleFileSelect(event) {
@@ -1290,6 +1430,7 @@ function handleFileSelect(event) {
     } else {
       queueUploads(filesArray);
     }
+    closeUploadModal();
   }
   event.target.value = '';
 }
@@ -1302,37 +1443,17 @@ function queueUploads(files) {
 }
 
 function queueFolderUploads(files) {
-  // Group files by their relative path directory
-  const pathGroups = new Map();
-
   files.forEach(file => {
-    // webkitRelativePath contains the full relative path from the selected folder
-    const relativePath = file.webkitRelativePath || file.name;
-    const pathParts = relativePath.split('/');
-
-    // The first part is the folder name, rest is the path inside that folder
-    if (pathParts.length > 1) {
-      const folderPath = pathParts.slice(0, -1).join('/');
-      if (!pathGroups.has(folderPath)) {
-        pathGroups.set(folderPath, []);
+    // Ensure targetSubPath is set
+    if (!file.targetSubPath) {
+      const rp = file.webkitRelativePath || file._relativePath || '';
+      if (rp.includes('/')) {
+        const parts = rp.split('/');
+        parts.pop(); // Remove filename
+        file.targetSubPath = parts.join('/');
       }
-      pathGroups.get(folderPath).push(file);
-    } else {
-      // File at root of selected folder
-      if (!pathGroups.has('')) {
-        pathGroups.set('', []);
-      }
-      pathGroups.get('').push(file);
     }
-  });
-
-  // Add files to upload queue with path information
-  pathGroups.forEach((folderFiles, folderPath) => {
-    folderFiles.forEach(file => {
-      // Add a custom property to track the relative path
-      file.targetSubPath = folderPath;
-      uploadQueue.push(file);
-    });
+    uploadQueue.push(file);
   });
 
   processQueue();
@@ -1350,7 +1471,7 @@ function startUpload(file) {
   const uploadId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
 
   // Create entry immediately so cancel button can find the right ID
-  const displayName = file.webkitRelativePath || file.name;
+  const displayName = file.webkitRelativePath || file._relativePath || file.name;
   globalUploads.set(uploadId, {
     id: uploadId,
     name: displayName,
@@ -1667,15 +1788,108 @@ function setupDragDrop() {
     e.preventDefault();
   });
 
-  content.addEventListener('drop', (e) => {
+  content.addEventListener('drop', async (e) => {
     e.preventDefault();
     dragCounter = 0;
     content.classList.remove('drop-active');
-    const files = e.dataTransfer.files;
-    if (files && files.length) {
-      queueUploads(Array.from(files));
+
+    const items = e.dataTransfer.items;
+    if (items && items.length && typeof items[0].webkitGetAsEntry === 'function') {
+      // Use webkitGetAsEntry to support folder drag-and-drop
+      const entries = [];
+      for (let i = 0; i < items.length; i++) {
+        const entry = items[i].webkitGetAsEntry();
+        if (entry) entries.push(entry);
+      }
+      if (entries.length) {
+        const files = await collectFilesFromEntries(entries);
+        if (files.length) {
+          // Check if any file has a directory path (folder upload)
+          const hasFolderStructure = files.some(f => {
+            const rp = f.webkitRelativePath || f._relativePath || '';
+            return rp.includes('/');
+          });
+          if (hasFolderStructure) {
+            queueFolderUploads(files);
+          } else {
+            queueUploads(files);
+          }
+        }
+      }
+    } else {
+      // Fallback: plain files only (no folder support)
+      const files = e.dataTransfer.files;
+      if (files && files.length) {
+        queueUploads(Array.from(files));
+      }
     }
   });
+}
+
+/**
+ * Recursively collect files from FileSystemEntry objects.
+ * Preserves folder structure via webkitRelativePath on each File.
+ */
+async function collectFilesFromEntries(entries) {
+  const files = [];
+
+  // Each call returns a Promise that resolves only after ALL descendant
+  // file-reading promises have settled — no shared-array race condition.
+  function traverseEntry(entry, path) {
+    if (entry.isFile) {
+      return new Promise((resolve) => {
+        entry.file((file) => {
+          const relativePath = path + file.name;
+          const wrappedFile = new File([file], file.name, { type: file.type, lastModified: file.lastModified });
+          try {
+            Object.defineProperty(wrappedFile, 'webkitRelativePath', {
+              value: relativePath,
+              writable: false,
+              configurable: true
+            });
+          } catch (_) {
+            wrappedFile._relativePath = relativePath;
+          }
+          wrappedFile.targetSubPath = path ? path.replace(/\/$/, '') : '';
+          files.push(wrappedFile);
+          resolve();
+        }, () => resolve());
+      });
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      const folderPath = path + entry.name + '/';
+      return readDirectory(dirReader, folderPath);
+    }
+    return Promise.resolve();
+  }
+
+  function readDirectory(dirReader, path) {
+    return new Promise((outerResolve) => {
+      const childPromises = [];
+      const readBatch = () => {
+        dirReader.readEntries((batchEntries) => {
+          if (batchEntries.length === 0) {
+            // All batches read — wait for every child promise before resolving
+            Promise.all(childPromises).then(outerResolve);
+            return;
+          }
+          for (const entry of batchEntries) {
+            childPromises.push(traverseEntry(entry, path));
+          }
+          // readEntries may not return all entries in one call; keep reading
+          readBatch();
+        }, () => outerResolve());
+      };
+      readBatch();
+    });
+  }
+
+  const allPromises = [];
+  for (const entry of entries) {
+    allPromises.push(traverseEntry(entry, ''));
+  }
+  await Promise.all(allPromises);
+  return files;
 }
 
 /* ===== Sidebar Toggle ===== */
@@ -1703,12 +1917,16 @@ document.getElementById('deleteModal').addEventListener('click', (e) => {
 document.getElementById('newFolderModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeNewFolderModal();
 });
+document.getElementById('uploadModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeUploadModal();
+});
 
 /* ===== Keyboard shortcuts ===== */
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeDeleteModal();
     closeNewFolderModal();
+    closeUploadModal();
     closeSidebar();
   }
 });
@@ -1720,6 +1938,7 @@ function init() {
   loadFiles();
   loadFolderTree();
   setupDragDrop();
+  setupUploadModalDrop();
   connectSSE();
 }
 
