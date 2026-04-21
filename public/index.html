@@ -739,6 +739,40 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   font-size: 0.8rem;
   color: var(--muted);
 }
+.upload-dropzone-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  justify-content: center;
+}
+.upload-pick-btn {
+  padding: 0.5rem 1.4rem;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.upload-pick-btn.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+}
+.upload-pick-btn.btn-primary:hover {
+  background: #1250d4;
+  box-shadow: 0 2px 8px rgba(21,94,239,0.3);
+  transform: translateY(-1px);
+}
+.upload-pick-btn.btn-ghost {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.upload-pick-btn.btn-ghost:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-soft);
+  transform: translateY(-1px);
+}
 
 /* ===== Sidebar Overlay (mobile) ===== */
 .sidebar-overlay {
@@ -850,7 +884,8 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
       <span class="btn-text">上传文件</span>
     </button>
   </div>
-  <input type="file" id="fileInput" multiple webkitdirectory directory style="display:none" onchange="handleFileSelect(event)">
+  <input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(event)">
+  <input type="file" id="folderInput" multiple webkitdirectory directory style="display:none" onchange="handleFileSelect(event)">
 </header>
 
 <!-- ===== Main ===== -->
@@ -951,7 +986,11 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
       <div class="upload-dropzone" id="uploadDropzone">
         <div class="upload-dropzone-icon">&#128194;</div>
         <div class="upload-dropzone-title">拖拽文件或文件夹到此处</div>
-        <div class="upload-dropzone-desc">或点击选择文件/文件夹</div>
+        <div class="upload-dropzone-desc">或点击下方按钮选择</div>
+        <div class="upload-dropzone-actions">
+          <button type="button" class="upload-pick-btn btn-primary" onclick="event.stopPropagation(); document.getElementById('fileInput').click();">&#128196; 选择文件</button>
+          <button type="button" class="upload-pick-btn btn-ghost" onclick="event.stopPropagation(); document.getElementById('folderInput').click();">&#128193; 选择文件夹</button>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1359,10 +1398,7 @@ function setupUploadModalDrop() {
   const dropzone = document.getElementById('uploadDropzone');
   let modalDragCounter = 0;
 
-  // 点击 dropzone 直接打开文件选择器（支持文件和文件夹）
-  dropzone.addEventListener('click', () => {
-    document.getElementById('fileInput').click();
-  });
+  // 点击 dropzone 不再直接打开文件选择器，改为由内部按钮触发
 
   dropzone.addEventListener('dragenter', (e) => {
     e.preventDefault();

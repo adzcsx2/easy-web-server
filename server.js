@@ -261,7 +261,7 @@ app.get('/api/files', (req, res) => {
 
     const entries = fs.readdirSync(resolved, { withFileTypes: true });
     const items = entries
-      .filter((e) => !e.name.startsWith('.'))
+      .filter((e) => e.name !== '.' && e.name !== '..' && !IGNORE_DIRS.includes(e.name))
       .map((entry) => {
         const fullPath = path.join(resolved, entry.name);
         const isDir = entry.isDirectory();
