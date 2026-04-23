@@ -32,6 +32,8 @@ const TEXT_FILE_EXTENSIONS = [
 // Upload progress tracking (shared across all requests / SSE clients)
 // ---------------------------------------------------------------------------
 const uploadProgress = new Map();
+const canceledUploads = new Map();
+const activeUploadRequests = new Map();
 
 /**
  * Generate a short unique id for each upload operation.
@@ -41,15 +43,20 @@ function generateUploadId() {
 }
 
 /**
- * Prune stale progress entries: remove entries older than 2 minutes
+ * Prune stale progress entries: remove entries older than 24 hours
  * or entries stuck in non-terminal states for too long.
  */
 function pruneProgressEntries() {
   const now = Date.now();
-  const maxAge = 2 * 60 * 1000; // 2 minutes
+  const maxAge = 24 * 60 * 60 * 1000; // 24 hours – large file uploads may take very long
   for (const [key, entry] of uploadProgress) {
     if (now - entry.timestamp > maxAge) {
       uploadProgress.delete(key);
+    }
+  }
+  for (const [key, ts] of canceledUploads) {
+    if (now - ts > maxAge) {
+      canceledUploads.delete(key);
     }
   }
   if (uploadProgress.size <= MAX_PROGRESS_ENTRIES) return;
@@ -312,6 +319,15 @@ app.post('/api/files/upload', (req, res) => {
   const filename = req.query.filename || '上传中...';
   const totalSize = parseInt(req.headers['content-length'] || '0', 10);
 
+  const isCancelled = () => canceledUploads.has(uploadId);
+
+  function markUploadCancelled(reason) {
+    progressEntry.status = 'canceled';
+    progressEntry.error = reason || 'Upload cancelled';
+    progressEntry.timestamp = Date.now();
+    setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
+  }
+
   // Register progress entry with client-provided ID
   const progressEntry = {
     uploadId,
@@ -323,124 +339,295 @@ app.post('/api/files/upload', (req, res) => {
     timestamp: Date.now(),
   };
   uploadProgress.set(uploadId, progressEntry);
+  activeUploadRequests.set(uploadId, req);
   pruneProgressEntries();
 
-  // Track bytes received to update progress during upload
-  let receivedBytes = 0;
-  req.on('data', (chunk) => {
-    receivedBytes += chunk.length;
-    if (totalSize > 0) {
-      progressEntry.loaded = receivedBytes;
-      progressEntry.percent = Math.round((receivedBytes / totalSize) * 100);
+  // Track client disconnect so we can skip processing an aborted upload
+  let clientAborted = false;
+  req.on('aborted', () => {
+    clientAborted = true;
+  });
+  req.on('close', () => {
+    if (!req.complete) {
+      clientAborted = true;
     }
+  });
+
+  // Update server-side progress for SSE consumers.
+  req.on('data', (chunk) => {
+    if (!chunk || !chunk.length) return;
+    progressEntry.loaded += chunk.length;
+    if (progressEntry.total > 0) {
+      progressEntry.percent = Math.min(100, Math.round((progressEntry.loaded / progressEntry.total) * 100));
+    }
+    progressEntry.timestamp = Date.now();
   });
 
   // We need to parse targetPath from the multipart body, so multer must run first.
   // Use a two-pass approach: first multer to parse fields, then validate and save.
   const tempDir = UPLOAD_TEMP_DIR;
   if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-  const tempUpload = multer({ dest: tempDir, limits: { fileSize: 500 * 1024 * 1024, files: 50 } }).array('files', 50);
+  const uploadStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, tempDir),
+    filename: (_req, file, cb) => {
+      const safeOriginal = sanitizeFilename(file.originalname || 'upload.bin');
+      const suffix = crypto.randomBytes(4).toString('hex');
+      cb(null, `${uploadId}-${Date.now()}-${suffix}-${safeOriginal}`);
+    },
+  });
+  const tempUpload = multer({
+    storage: uploadStorage,
+    limits: { fileSize: 10 * 1024 * 1024 * 1024, files: 50 },
+  }).array('files', 50);
 
-  tempUpload(req, res, (err) => {
-    if (err) {
-      console.error('Upload error:', err);
+  tempUpload(req, res, async (err) => {
+    // Helper to clean up temp files from multer disk storage
+    async function cleanupTempFiles(fileList) {
+      for (const file of (fileList || [])) {
+        try { await fs.promises.unlink(file.path); } catch (_) {}
+      }
+    }
+
+    try {
+      if (isCancelled()) {
+        await cleanupTempFiles(req.files);
+        markUploadCancelled('Upload cancelled by user');
+        if (!res.headersSent) {
+          return res.status(499).json({ error: 'Upload cancelled', uploadId: progressEntry.uploadId, cancelled: true });
+        }
+        return;
+      }
+
+      if (err) {
+        if (isCancelled() || clientAborted) {
+          await cleanupTempFiles(req.files);
+          markUploadCancelled('Upload cancelled by client');
+          if (!res.headersSent) {
+            return res.status(499).json({ error: 'Upload cancelled', uploadId: progressEntry.uploadId, cancelled: true });
+          }
+          return;
+        }
+
+        console.error('Upload error:', err);
+        progressEntry.status = 'error';
+        progressEntry.error = err.message;
+        progressEntry.timestamp = Date.now();
+        setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
+        await cleanupTempFiles(req.files);
+        if (!res.headersSent) {
+          return res.status(400).json({ error: err.message, uploadId: progressEntry.uploadId });
+        }
+        return;
+      }
+
+      // Client already disconnected – skip file processing, just clean up temp files
+      if (clientAborted) {
+        markUploadCancelled('Upload aborted by client');
+        await cleanupTempFiles(req.files);
+        if (!res.headersSent) {
+          return res.status(499).json({ error: 'Upload cancelled', uploadId: progressEntry.uploadId, cancelled: true });
+        }
+        return;
+      }
+
+      // Now req.body is populated by multer
+      const targetPath = (req.body && req.body.targetPath) || '';
+
+      let resolvedTarget;
+      try {
+        resolvedTarget = validatePath(targetPath, FILES_ROOT);
+      } catch (pathErr) {
+        await cleanupTempFiles(req.files);
+        return res.status(403).json({ error: pathErr.message });
+      }
+
+      // Ensure target directory exists (create recursively if needed)
+      if (!fs.existsSync(resolvedTarget)) {
+        try {
+          fs.mkdirSync(resolvedTarget, { recursive: true });
+        } catch (mkdirErr) {
+          console.error('Failed to create target directory:', mkdirErr);
+          await cleanupTempFiles(req.files);
+          return res.status(500).json({ error: 'Failed to create target directory' });
+        }
+      }
+
+      // Verify resolved target is a directory
+      try {
+        if (!fs.statSync(resolvedTarget).isDirectory()) {
+          await cleanupTempFiles(req.files);
+          return res.status(400).json({ error: 'Target path is not a directory' });
+        }
+      } catch (statErr) {
+        console.error('Failed to stat target directory:', statErr);
+        await cleanupTempFiles(req.files);
+        return res.status(500).json({ error: 'Target directory not accessible' });
+      }
+
+      // Move files from temp to target directory (async to avoid blocking event loop)
+      const files = req.files || [];
+      const savedFiles = [];
+
+      // Network transfer finished; now server is processing final persistence.
+      progressEntry.status = 'processing';
+      progressEntry.percent = Math.min(100, progressEntry.percent || 100);
+      progressEntry.timestamp = Date.now();
+
+      async function moveTempFile(src, dest) {
+        try {
+          await fs.promises.rename(src, dest);
+        } catch (renameErr) {
+          if (renameErr && renameErr.code === 'EXDEV') {
+            await fs.promises.copyFile(src, dest);
+            await fs.promises.unlink(src);
+            return;
+          }
+          throw renameErr;
+        }
+      }
+
+      for (const file of files) {
+        if (isCancelled() || clientAborted) {
+          await cleanupTempFiles(files);
+          markUploadCancelled('Upload cancelled by user');
+          if (!res.headersSent) {
+            return res.status(499).json({ error: 'Upload cancelled', uploadId: progressEntry.uploadId, cancelled: true });
+          }
+          return;
+        }
+
+        // Decode filename to handle Chinese characters correctly
+        const decodedName = decodeFilename(file.originalname);
+        const safeName = sanitizeFilename(decodedName);
+        let finalName = safeName;
+        let finalDest = path.join(resolvedTarget, finalName);
+
+        if (fs.existsSync(finalDest)) {
+          const ext = path.extname(safeName);
+          const base = path.basename(safeName, ext);
+          let counter = 1;
+          while (fs.existsSync(path.join(resolvedTarget, `${base}_${counter}${ext}`))) {
+            counter++;
+          }
+          finalName = `${base}_${counter}${ext}`;
+          finalDest = path.join(resolvedTarget, finalName);
+        }
+
+        try {
+          const src = file.path;
+          if (src) {
+            await moveTempFile(src, finalDest);
+          } else {
+            // Fallback: write from buffer if disk storage didn't set path
+            await fs.promises.writeFile(finalDest, file.buffer);
+          }
+          savedFiles.push({ originalName: decodedName, savedName: finalName, size: file.size });
+        } catch (moveErr) {
+          console.error('Failed to move uploaded file:', moveErr);
+          try { await fs.promises.unlink(file.path); } catch (_) {}
+        }
+      }
+
+      // Check for total failure BEFORE setting success status
+      if (savedFiles.length === 0 && files.length > 0) {
+        console.error('All file moves failed for upload', progressEntry.uploadId);
+        progressEntry.status = 'error';
+        progressEntry.error = 'Failed to save all files';
+        progressEntry.timestamp = Date.now();
+        setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
+        return res.status(500).json({ error: 'Failed to save uploaded files', uploadId: progressEntry.uploadId });
+      }
+
+      progressEntry.loaded = totalSize;
+      progressEntry.percent = 100;
+      progressEntry.status = 'done';
+      progressEntry.fileCount = savedFiles.length;
+      progressEntry.timestamp = Date.now();
+
+      // Update filename to show actual uploaded file names
+      if (savedFiles.length === 1) {
+        progressEntry.filename = savedFiles[0].savedName;
+      } else if (savedFiles.length > 1) {
+        progressEntry.filename = savedFiles[0].savedName + ' 等' + savedFiles.length + '个文件';
+      }
+
+      // Remove progress entry after 8 seconds so SSE stops broadcasting it
+      setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
+
+      res.json({
+        success: true,
+        uploadId: progressEntry.uploadId,
+        files: savedFiles,
+      });
+    } catch (unhandledErr) {
+      if (isCancelled() || clientAborted) {
+        markUploadCancelled('Upload cancelled by client');
+        await cleanupTempFiles(req.files);
+        if (!res.headersSent) {
+          return res.status(499).json({ error: 'Upload cancelled', uploadId: progressEntry.uploadId, cancelled: true });
+        }
+        return;
+      }
+
+      console.error('Unhandled error in upload handler:', unhandledErr);
       progressEntry.status = 'error';
-      progressEntry.error = err.message;
+      progressEntry.error = unhandledErr.message || 'Internal upload error';
       progressEntry.timestamp = Date.now();
       setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
+      await cleanupTempFiles(req.files);
       if (!res.headersSent) {
-        return res.status(400).json({ error: err.message, uploadId: progressEntry.uploadId });
+        return res.status(500).json({ error: 'Upload processing failed', uploadId: progressEntry.uploadId });
       }
-      return;
+    } finally {
+      activeUploadRequests.delete(uploadId);
     }
-
-    // Now req.body is populated by multer
-    const targetPath = (req.body && req.body.targetPath) || '';
-
-    let resolvedTarget;
-    try {
-      resolvedTarget = validatePath(targetPath, FILES_ROOT);
-    } catch (pathErr) {
-      return res.status(403).json({ error: pathErr.message });
-    }
-
-    // Ensure target directory exists (create recursively if needed)
-    if (!fs.existsSync(resolvedTarget)) {
-      try {
-        fs.mkdirSync(resolvedTarget, { recursive: true });
-      } catch (mkdirErr) {
-        console.error('Failed to create target directory:', mkdirErr);
-        return res.status(500).json({ error: 'Failed to create target directory' });
-      }
-    }
-
-    // Verify resolved target is a directory
-    if (!fs.statSync(resolvedTarget).isDirectory()) {
-      return res.status(400).json({ error: 'Target path is not a directory' });
-    }
-
-    // Move files from temp to target directory
-    const files = req.files || [];
-    const savedFiles = [];
-
-    for (const file of files) {
-      // Decode filename to handle Chinese characters correctly
-      const decodedName = decodeFilename(file.originalname);
-      const safeName = sanitizeFilename(decodedName);
-      let finalName = safeName;
-      const destPath = path.join(resolvedTarget, finalName);
-
-      if (fs.existsSync(destPath)) {
-        const ext = path.extname(safeName);
-        const base = path.basename(safeName, ext);
-        let counter = 1;
-        while (fs.existsSync(path.join(resolvedTarget, `${base}_${counter}${ext}`))) {
-          counter++;
-        }
-        finalName = `${base}_${counter}${ext}`;
-      }
-
-      const finalDest = path.join(resolvedTarget, finalName);
-      try {
-        // Use copy+unlink instead of rename to handle cross-device scenarios
-        const src = file.path;
-        if (src) {
-          fs.copyFileSync(src, finalDest);
-          try { fs.unlinkSync(src); } catch (_) {}
-        } else {
-          // Fallback: write from buffer if disk storage didn't set path
-          fs.writeFileSync(finalDest, file.buffer);
-        }
-        savedFiles.push({ originalName: decodedName, savedName: finalName, size: file.size });
-      } catch (moveErr) {
-        console.error('Failed to move uploaded file:', moveErr);
-        // Clean up temp file
-        try { fs.unlinkSync(file.path); } catch (_) {}
-      }
-    }
-
-    progressEntry.loaded = totalSize;
-    progressEntry.percent = 100;
-    progressEntry.status = 'done';
-    progressEntry.fileCount = savedFiles.length;
-    progressEntry.timestamp = Date.now();
-
-    // Update filename to show actual uploaded file names
-    if (savedFiles.length === 1) {
-      progressEntry.filename = savedFiles[0].savedName;
-    } else if (savedFiles.length > 1) {
-      progressEntry.filename = savedFiles[0].savedName + ' 等' + savedFiles.length + '个文件';
-    }
-
-    // Remove progress entry after 8 seconds so SSE stops broadcasting it
-    setTimeout(() => uploadProgress.delete(progressEntry.uploadId), 8000);
-
-    res.json({
-      success: true,
-      uploadId: progressEntry.uploadId,
-      files: savedFiles,
-    });
   });
+});
+
+// --- POST /api/files/upload/cancel ----------------------------------------
+app.post('/api/files/upload/cancel', (req, res) => {
+  try {
+    const uploadId = (req.body && req.body.uploadId) || req.query.uploadId;
+    if (!uploadId) {
+      return res.status(400).json({ error: 'uploadId is required' });
+    }
+
+    canceledUploads.set(uploadId, Date.now());
+
+    const entry = uploadProgress.get(uploadId);
+    if (entry && entry.status !== 'done' && entry.status !== 'error' && entry.status !== 'canceled') {
+      entry.status = 'canceled';
+      entry.error = 'Upload cancelled by user';
+      entry.timestamp = Date.now();
+      setTimeout(() => uploadProgress.delete(uploadId), 8000);
+    }
+
+    const activeReq = activeUploadRequests.get(uploadId);
+    if (activeReq && !activeReq.destroyed) {
+      try {
+        activeReq.destroy(new Error('Upload cancelled by user'));
+      } catch (_) {}
+    }
+
+    // Best-effort immediate cleanup for temp artifacts created by this upload.
+    // Files are prefixed with uploadId by multer diskStorage.
+    try {
+      if (fs.existsSync(UPLOAD_TEMP_DIR)) {
+        const tempFiles = fs.readdirSync(UPLOAD_TEMP_DIR);
+        for (const name of tempFiles) {
+          if (!name.startsWith(`${uploadId}-`)) continue;
+          try {
+            fs.rmSync(path.join(UPLOAD_TEMP_DIR, name), { recursive: true, force: true });
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    res.json({ success: true, uploadId, cancelled: true });
+  } catch (err) {
+    console.error('Error in POST /api/files/upload/cancel:', err);
+    res.status(500).json({ error: 'Failed to cancel upload' });
+  }
 });
 
 // --- GET /api/files/upload-progress (SSE) ---------------------------------
@@ -671,6 +858,19 @@ if (!fs.existsSync(FILES_ROOT)) {
   }
 }
 
+// Clean up stale temp files from previous uploads
+if (fs.existsSync(UPLOAD_TEMP_DIR)) {
+  try {
+    const tempFiles = fs.readdirSync(UPLOAD_TEMP_DIR);
+    for (const f of tempFiles) {
+      try { fs.rmSync(path.join(UPLOAD_TEMP_DIR, f), { recursive: true, force: true }); } catch (_) {}
+    }
+    if (tempFiles.length > 0) {
+      console.log(`Cleaned up ${tempFiles.length} stale temp file(s)`);
+    }
+  } catch (_) {}
+}
+
 /**
  * Get the first non-internal IPv4 address for network display.
  */
@@ -698,7 +898,7 @@ function getLocalIPv4() {
 }
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   const localUrl = `http://localhost:${PORT}`;
   const networkUrl = `http://${getLocalIPv4()}:${PORT}`;
 
@@ -707,5 +907,11 @@ app.listen(PORT, () => {
   console.log(`  Network: ${networkUrl}`);
   console.log();
 });
+
+// Disable timeouts so large file uploads/downloads are not cut off.
+// Default Node.js timeout is 120s which aborts big transfers on fast LAN.
+server.timeout = 0;           // socket idle timeout (0 = disabled for large file transfers)
+server.keepAliveTimeout = 0;  // HTTP keep-alive timeout
+server.headersTimeout = 60_000; // header timeout – prevents Slowloris DoS
 
 module.exports = app;

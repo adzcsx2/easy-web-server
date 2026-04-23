@@ -1474,8 +1474,10 @@ function handleFileSelect(event) {
 
 function queueUploads(files) {
   files.forEach(file => {
-    uploadQueue.push(file);
+    const task = createUploadTask(file);
+    uploadQueue.push(task);
   });
+  renderUploadPanel();
   processQueue();
 }
 
@@ -1490,31 +1492,77 @@ function queueFolderUploads(files) {
         file.targetSubPath = parts.join('/');
       }
     }
-    uploadQueue.push(file);
+    const task = createUploadTask(file);
+    uploadQueue.push(task);
   });
 
+  renderUploadPanel();
   processQueue();
 }
 
-function processQueue() {
-  while (activeUploads < MAX_CONCURRENT && uploadQueue.length > 0) {
-    const file = uploadQueue.shift();
-    startUpload(file);
-  }
-}
-
-function startUpload(file) {
-  activeUploads++;
+function createUploadTask(file) {
   const uploadId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-
-  // Create entry immediately so cancel button can find the right ID
   const displayName = file.webkitRelativePath || file._relativePath || file.name;
+
   globalUploads.set(uploadId, {
     id: uploadId,
     name: displayName,
     progress: 0,
-    status: 'uploading',
+    status: 'queued',
   });
+
+  return {
+    id: uploadId,
+    file,
+  };
+}
+
+function removeQueuedTaskById(uploadId) {
+  const idx = uploadQueue.findIndex(task => task.id === uploadId);
+  if (idx >= 0) {
+    uploadQueue.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+
+function notifyServerCancel(uploadId) {
+  fetch('/api/files/upload/cancel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ uploadId })
+  }).catch(() => {
+    // Ignore cancellation request failures on client side.
+  });
+}
+
+function hideUploadNow(uploadId) {
+  hiddenGlobalIds.add(uploadId);
+  globalUploads.delete(uploadId);
+  const el = document.getElementById('upload-' + uploadId);
+  if (el) el.remove();
+  renderUploadPanel();
+}
+
+function processQueue() {
+  while (activeUploads < MAX_CONCURRENT && uploadQueue.length > 0) {
+    const task = uploadQueue.shift();
+    if (!task || !task.file) continue;
+    startUpload(task);
+  }
+}
+
+function startUpload(task) {
+  const file = task.file;
+  const uploadId = task.id;
+
+  activeUploads++;
+
+  const current = globalUploads.get(uploadId);
+  if (current) {
+    current.status = 'uploading';
+    current.progress = current.progress || 0;
+  }
   renderUploadPanel();
 
   const fd = new FormData();
@@ -1553,11 +1601,33 @@ function startUpload(file) {
 
   xhr.onload = () => {
     activeXhrs.delete(uploadId);
-    if (xhr.status >= 200 && xhr.status < 300) {
+    let resp = null;
+    try { resp = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
+
+    const info = globalUploads.get(uploadId);
+
+    if (xhr.__cancelled || (resp && resp.cancelled)) {
+      if (info) {
+        info.status = 'canceled';
+      }
+      updateUploadItem(uploadId, info ? info.progress || 0 : 0, 'canceled');
+      scheduleHideUpload(uploadId);
+    } else if (xhr.status >= 200 && xhr.status < 300) {
+      if (info) {
+        info.progress = 100;
+        info.status = 'done';
+      }
+      updateUploadItem(uploadId, 100, 'done');
+      scheduleHideUpload(uploadId);
       showToast(`${file.name} 上传成功`, 'success');
       loadFiles();
       loadFolderTree();
     } else {
+      if (info) {
+        info.status = 'error';
+      }
+      updateUploadItem(uploadId, info ? info.progress || 0 : 0, 'error');
+      scheduleHideUpload(uploadId);
       showToast(`${file.name} 上传失败`, 'error');
     }
     activeUploads--;
@@ -1566,7 +1636,17 @@ function startUpload(file) {
 
   xhr.onerror = () => {
     activeXhrs.delete(uploadId);
-    if (xhr.__cancelled) return;
+    if (xhr.__cancelled) {
+      activeUploads--;
+      processQueue();
+      return;
+    }
+    const info = globalUploads.get(uploadId);
+    if (info) {
+      info.status = 'error';
+    }
+    updateUploadItem(uploadId, info ? info.progress || 0 : 0, 'error');
+    scheduleHideUpload(uploadId);
     showToast(`${file.name} 上传失败`, 'error');
     activeUploads--;
     processQueue();
@@ -1574,11 +1654,7 @@ function startUpload(file) {
 
   xhr.onabort = () => {
     activeXhrs.delete(uploadId);
-    hiddenGlobalIds.add(uploadId);  // Prevent SSE from re-adding
-    globalUploads.delete(uploadId);
-    const el = document.getElementById('upload-' + uploadId);
-    if (el) el.remove();
-    renderUploadPanel();
+    hideUploadNow(uploadId);
     activeUploads--;
     processQueue();
   };
@@ -1587,12 +1663,24 @@ function startUpload(file) {
 }
 
 function cancelUpload(uploadId) {
+  const canceledFromQueue = removeQueuedTaskById(uploadId);
+  if (canceledFromQueue) {
+    const info = globalUploads.get(uploadId);
+    const name = info ? info.name : '文件';
+    notifyServerCancel(uploadId);
+    hideUploadNow(uploadId);
+    showToast(`${name} 已取消上传`, 'info');
+    return;
+  }
+
   const xhr = activeXhrs.get(uploadId);
   if (xhr) {
     const info = globalUploads.get(uploadId);
     const name = info ? info.name : '文件';
     xhr.__cancelled = true;
+    notifyServerCancel(uploadId);
     xhr.abort();
+    hideUploadNow(uploadId);
     showToast(`${name} 已取消上传`, 'info');
   }
 }
@@ -1624,7 +1712,7 @@ function updateUploadItem(uploadId, progress, status, speed) {
       const speedText = speed != null ? ' ' + formatSpeed(speed) : '';
       text = progress + '%' + speedText;
     } else {
-      const statusMap = { processing: '处理中...', done: '完成', error: '失败' };
+      const statusMap = { queued: '排队中', processing: '处理中...', done: '完成', error: '失败', canceled: '已取消' };
       text = statusMap[status] || '';
     }
     statusEl.textContent = text;
@@ -1632,10 +1720,12 @@ function updateUploadItem(uploadId, progress, status, speed) {
   if (iconEl) {
     iconEl.className = 'upload-item-icon ' + status;
     const iconMap = {
+      queued: '&#8942;',
       uploading: '&#8593;',
       processing: '&#8987;',
       done: '&#10003;',
-      error: '&#10007;'
+      error: '&#10007;',
+      canceled: '&#10005;'
     };
     iconEl.innerHTML = iconMap[status] || '&#8593;';
   }
@@ -1688,19 +1778,24 @@ function renderUploadPanel() {
 
     const statusClass = u.status || 'uploading';
     const iconMap = {
+      queued: '&#8942;',
       uploading: '&#8593;',
       processing: '&#8987;',
       done: '&#10003;',
-      error: '&#10007;'
+      error: '&#10007;',
+      canceled: '&#10005;'
     };
     const statusTextMap = {
+      queued: '排队中',
       uploading: (u.progress || 0) + '%',
       processing: '处理中...',
       done: '完成',
-      error: '失败'
+      error: '失败',
+      canceled: '已取消'
     };
 
-    const cancelBtn = ((statusClass === 'uploading' || statusClass === 'processing') && activeXhrs.has(id))
+    const canCancel = statusClass === 'queued' || ((statusClass === 'uploading' || statusClass === 'processing') && activeXhrs.has(id));
+    const cancelBtn = canCancel
       ? `<button class="upload-item-cancel" onclick="cancelUpload('${id}')" title="取消">&#10005;</button>`
       : '';
 
@@ -1750,6 +1845,16 @@ function renderGlobalProgress(data) {
   Object.values(data).forEach(item => {
     const id = item.uploadId || item.id;
     if (!id) return;
+
+    // Canceled uploads should not appear in transfer list.
+    if (item.status === 'canceled') {
+      hiddenGlobalIds.add(id);
+      globalUploads.delete(id);
+      const el = document.getElementById('upload-' + id);
+      if (el) el.remove();
+      return;
+    }
+
     serverIds.add(id);
     // Skip entries already hidden
     if (hiddenGlobalIds.has(id)) return;
@@ -1786,7 +1891,11 @@ function renderGlobalProgress(data) {
 
   // Remove global entries no longer present in server data
   for (const id of globalUploads.keys()) {
-    if (!serverIds.has(id)) {
+    const entry = globalUploads.get(id);
+    const isLocalRunning = activeXhrs.has(id) || uploadQueue.some(task => task.id === id);
+    const isTerminal = entry && (entry.status === 'done' || entry.status === 'error' || entry.status === 'canceled');
+
+    if (!serverIds.has(id) && !isLocalRunning && !isTerminal) {
       globalUploads.delete(id);
       hiddenGlobalIds.delete(id);
       const el = document.getElementById('upload-' + id);
