@@ -1235,19 +1235,19 @@ async function loadFiles() {
     let rowCls = '';
     if (f.isDir) {
       const navPath = (currentPath ? currentPath + '/' : '') + f.name;
-      clickAction = `onclick="navigateTo('${escapeHtml(navPath)}')"`;
+      clickAction = `data-nav-path="${escapeHtml(navPath)}"`;
       rowCls = 'file-row';
     } else {
       const ext = f.name.split('.').pop().toLowerCase();
       if (isTextFile(f.name)) {
         // 文本文件通过安全渲染端点打开
         const filePath = (currentPath ? currentPath + '/' : '') + f.name;
-        clickAction = `onclick="window.open('/api/files/view?path=${encodeURIComponent(filePath)}','_blank')"`;
+        clickAction = `data-view-path="${escapeHtml(filePath)}"`;
         rowCls = 'file-row';
       } else {
         // 其他所有文件类型直接在新窗口打开（让浏览器决定如何处理）
         const filePath = '/' + (currentPath ? currentPath + '/' : '') + encodeURIComponent(f.name);
-        clickAction = `onclick="window.open('${escapeHtml(filePath)}','_blank')"`;
+        clickAction = `data-open-url="${escapeHtml(filePath)}"`;
         rowCls = 'file-row';
       }
     }
@@ -1255,14 +1255,14 @@ async function loadFiles() {
     let actionsHtml = '';
     if (f.isDir && f.hasIndexHtml) {
       const sitePath = '/' + (currentPath ? currentPath + '/' : '') + encodeURIComponent(f.name) + '/';
-      actionsHtml += `<button class="btn-icon btn-icon-site" title="打开网站" onclick="event.stopPropagation();window.open('${escapeHtml(sitePath)}','_blank')">&#9741;</button>`;
+      actionsHtml += `<button class="btn-icon btn-icon-site" title="打开网站" data-action="site" data-site-path="${escapeHtml(sitePath)}">&#9741;</button>`;
     }
     if (!f.isDir) {
       const filePath = (currentPath ? currentPath + '/' : '') + f.name;
-      actionsHtml += `<button class="btn-icon" title="下载" onclick="event.stopPropagation();downloadFile('${escapeHtml(filePath)}')">&#8595;</button>`;
+      actionsHtml += `<button class="btn-icon" title="下载" data-action="download" data-file-path="${escapeHtml(filePath)}">&#8595;</button>`;
     }
     const delPath = (currentPath ? currentPath + '/' : '') + f.name;
-    actionsHtml += `<button class="btn-icon btn-icon-danger" title="删除" onclick="event.stopPropagation();showDeleteModal('${escapeHtml(delPath)}','${escapeHtml(f.name)}')">&#10005;</button>`;
+    actionsHtml += `<button class="btn-icon btn-icon-danger" title="删除" data-action="delete" data-delete-path="${escapeHtml(delPath)}" data-delete-name="${escapeHtml(f.name)}">&#10005;</button>`;
 
     const siteBadgeHtml = f.isDir && f.hasIndexHtml
       ? '<span class="site-badge">site</span>'
@@ -1280,6 +1280,7 @@ async function loadFiles() {
       <td><div class="file-actions">${actionsHtml}</div></td>
     </tr>`;
   }).join('');
+  setupActionButtons();
 }
 
 /* ===== Folder Tree ===== */
@@ -2078,6 +2079,36 @@ document.addEventListener('keydown', (e) => {
 });
 
 /* ===== Init ===== */
+function setupActionButtons() {
+  // Handle action buttons (site, download, delete)
+  document.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      if (action === 'site') {
+        window.open(btn.dataset.sitePath, '_blank');
+      } else if (action === 'download') {
+        downloadFile(btn.dataset.filePath);
+      } else if (action === 'delete') {
+        showDeleteModal(btn.dataset.deletePath, btn.dataset.deleteName);
+      }
+    });
+  });
+
+  // Handle row clicks (navigate to folder, open file)
+  document.querySelectorAll('.file-row[data-nav-path], .file-row[data-view-path], .file-row[data-open-url]').forEach(row => {
+    row.addEventListener('click', () => {
+      if (row.dataset.navPath) {
+        navigateTo(row.dataset.navPath);
+      } else if (row.dataset.viewPath) {
+        window.open('/api/files/view?path=' + encodeURIComponent(row.dataset.viewPath), '_blank');
+      } else if (row.dataset.openUrl) {
+        window.open(row.dataset.openUrl, '_blank');
+      }
+    });
+  });
+}
+
 function init() {
   initFromURL();
   renderBreadcrumb();
@@ -2085,6 +2116,7 @@ function init() {
   loadFolderTree();
   setupDragDrop();
   setupUploadModalDrop();
+  setupActionButtons();
   connectSSE();
 }
 
