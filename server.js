@@ -35,6 +35,9 @@ const uploadProgress = new Map();
 const canceledUploads = new Map();
 const activeUploadRequests = new Map();
 
+// 上传分组：key=groupId, value={groupId, rootLabel, groupRootPath, baseTargetPath, taskIds, writtenPaths, createdAt, cancelled}
+const uploadGroups = new Map();
+
 /**
  * Generate a short unique id for each upload operation.
  */
@@ -57,6 +60,13 @@ function pruneProgressEntries() {
   for (const [key, ts] of canceledUploads) {
     if (now - ts > maxAge) {
       canceledUploads.delete(key);
+    }
+  }
+  // 清理所有任务都已消失的分组
+  for (const [gid, group] of uploadGroups) {
+    const hasActiveTasks = Array.from(group.taskIds).some(id => uploadProgress.has(id));
+    if (!hasActiveTasks) {
+      uploadGroups.delete(gid);
     }
   }
   if (uploadProgress.size <= MAX_PROGRESS_ENTRIES) return;
@@ -314,12 +324,18 @@ app.get('/api/files', (req, res) => {
 
 // --- POST /api/files/upload -----------------------------------------------
 app.post('/api/files/upload', (req, res) => {
-  // Read uploadId from query params so it's available before multer parses the body
+  // Read uploadId and group info from query params (available before multer parses body)
   const uploadId = req.query.uploadId || generateUploadId();
   const filename = req.query.filename || '上传中...';
   const totalSize = parseInt(req.headers['content-length'] || '0', 10);
+  // 分组相关参数（文件夹上传时由客户端传入）
+  const groupId = req.query.groupId || uploadId; // 无 groupId 时退化为 uploadId（单文件兼容）
+  const relPath = req.query.relPath ? decodeURIComponent(req.query.relPath) : '';
+  const groupRoot = req.query.groupRoot ? decodeURIComponent(req.query.groupRoot) : '';
+  const rootLabel = req.query.rootLabel ? decodeURIComponent(req.query.rootLabel) : filename;
 
-  const isCancelled = () => canceledUploads.has(uploadId);
+  const isCancelled = () => canceledUploads.has(uploadId) ||
+    (uploadGroups.has(groupId) && uploadGroups.get(groupId).cancelled);
 
   function markUploadCancelled(reason) {
     progressEntry.status = 'canceled';
@@ -331,15 +347,35 @@ app.post('/api/files/upload', (req, res) => {
   // Register progress entry with client-provided ID
   const progressEntry = {
     uploadId,
+    groupId,
+    relativePath: relPath,
     filename,
     total: totalSize,
     loaded: 0,
     percent: 0,
+    speed: 0,          // bytes/sec，滑动窗口计算
+    persistedPath: '', // 文件落盘后的绝对路径（用于取消时清理）
     status: 'uploading',
     timestamp: Date.now(),
+    _speedSamples: [], // [{t, loaded}] 用于滑动窗口计算速率
   };
   uploadProgress.set(uploadId, progressEntry);
   activeUploadRequests.set(uploadId, req);
+
+  // 注册/更新分组信息
+  if (!uploadGroups.has(groupId)) {
+    uploadGroups.set(groupId, {
+      groupId,
+      rootLabel,
+      groupRootPath: groupRoot,
+      taskIds: new Set(),
+      writtenPaths: new Set(),
+      createdAt: Date.now(),
+      cancelled: false,
+    });
+  }
+  uploadGroups.get(groupId).taskIds.add(uploadId);
+
   pruneProgressEntries();
 
   // Track client disconnect so we can skip processing an aborted upload
@@ -360,7 +396,22 @@ app.post('/api/files/upload', (req, res) => {
     if (progressEntry.total > 0) {
       progressEntry.percent = Math.min(100, Math.round((progressEntry.loaded / progressEntry.total) * 100));
     }
-    progressEntry.timestamp = Date.now();
+    const now = Date.now();
+    progressEntry.timestamp = now;
+
+    // 滑动窗口速率计算（1500ms 窗口）
+    const samples = progressEntry._speedSamples;
+    samples.push({ t: now, loaded: progressEntry.loaded });
+    // 移除 1500ms 以外的旧样本
+    const cutoff = now - 1500;
+    while (samples.length > 1 && samples[0].t < cutoff) {
+      samples.shift();
+    }
+    if (samples.length >= 2) {
+      const dt = samples[samples.length - 1].t - samples[0].t;
+      const dl = samples[samples.length - 1].loaded - samples[0].loaded;
+      progressEntry.speed = dt > 0 ? Math.round((dl / dt) * 1000) : 0;
+    }
   });
 
   // We need to parse targetPath from the multipart body, so multer must run first.
@@ -522,6 +573,11 @@ app.post('/api/files/upload', (req, res) => {
             await fs.promises.writeFile(finalDest, file.buffer);
           }
           savedFiles.push({ originalName: decodedName, savedName: finalName, size: file.size });
+          // 记录落盘路径，供取消时清理
+          progressEntry.persistedPath = finalDest;
+          if (uploadGroups.has(groupId)) {
+            uploadGroups.get(groupId).writtenPaths.add(finalDest);
+          }
         } catch (moveErr) {
           console.error('Failed to move uploaded file:', moveErr);
           try { await fs.promises.unlink(file.path); } catch (_) {}
@@ -591,11 +647,17 @@ app.post('/api/files/upload/cancel', (req, res) => {
     if (!uploadId) {
       return res.status(400).json({ error: 'uploadId is required' });
     }
+    // removeFiles=true（默认）时删除已落盘文件；false 时仅清历史
+    const removeFiles = req.body && req.body.removeFiles !== undefined
+      ? req.body.removeFiles !== false && req.body.removeFiles !== 'false'
+      : true;
 
     canceledUploads.set(uploadId, Date.now());
 
     const entry = uploadProgress.get(uploadId);
-    if (entry && entry.status !== 'done' && entry.status !== 'error' && entry.status !== 'canceled') {
+    const wasTerminal = entry && (entry.status === 'done' || entry.status === 'error' || entry.status === 'canceled');
+
+    if (entry && !wasTerminal) {
       entry.status = 'canceled';
       entry.error = 'Upload cancelled by user';
       entry.timestamp = Date.now();
@@ -609,8 +671,7 @@ app.post('/api/files/upload/cancel', (req, res) => {
       } catch (_) {}
     }
 
-    // Best-effort immediate cleanup for temp artifacts created by this upload.
-    // Files are prefixed with uploadId by multer diskStorage.
+    // 清理 .tmp 下的临时文件
     try {
       if (fs.existsSync(UPLOAD_TEMP_DIR)) {
         const tempFiles = fs.readdirSync(UPLOAD_TEMP_DIR);
@@ -623,10 +684,109 @@ app.post('/api/files/upload/cancel', (req, res) => {
       }
     } catch (_) {}
 
+    // 若未完成且要求清理，删除已落盘的文件
+    if (removeFiles && !wasTerminal && entry && entry.persistedPath) {
+      try {
+        const p = entry.persistedPath;
+        validatePath(path.relative(FILES_ROOT, p), FILES_ROOT);
+        fs.rmSync(p, { force: true });
+      } catch (_) {}
+    }
+
     res.json({ success: true, uploadId, cancelled: true });
   } catch (err) {
     console.error('Error in POST /api/files/upload/cancel:', err);
     res.status(500).json({ error: 'Failed to cancel upload' });
+  }
+});
+
+// --- POST /api/files/upload/cancel-group ----------------------------------
+app.post('/api/files/upload/cancel-group', (req, res) => {
+  try {
+    const groupId = (req.body && req.body.groupId) || req.query.groupId;
+    if (!groupId) {
+      return res.status(400).json({ error: 'groupId is required' });
+    }
+    const removeFiles = req.body && req.body.removeFiles !== undefined
+      ? req.body.removeFiles !== false && req.body.removeFiles !== 'false'
+      : true;
+
+    const group = uploadGroups.get(groupId);
+
+    // 标记分组为已取消，正在上传的任务会在下次循环中检测到
+    if (group) {
+      group.cancelled = true;
+    }
+
+    // 取消所有属于此组的活跃请求并标记进度条目
+    const taskIds = group ? Array.from(group.taskIds) : [];
+    for (const uploadId of taskIds) {
+      canceledUploads.set(uploadId, Date.now());
+      const entry = uploadProgress.get(uploadId);
+      if (entry && entry.status !== 'done' && entry.status !== 'error' && entry.status !== 'canceled') {
+        entry.status = 'canceled';
+        entry.error = 'Cancelled by group cancel';
+        entry.timestamp = Date.now();
+        setTimeout(() => uploadProgress.delete(uploadId), 8000);
+      }
+      const activeReq = activeUploadRequests.get(uploadId);
+      if (activeReq && !activeReq.destroyed) {
+        try { activeReq.destroy(new Error('Group cancel')); } catch (_) {}
+      }
+    }
+
+    // 清理 .tmp 下属于此组所有任务的临时文件
+    // 用 Set 做前缀匹配，避免 O(M×N) 嵌套扫描
+    try {
+      if (fs.existsSync(UPLOAD_TEMP_DIR)) {
+        const taskIdSet = new Set(taskIds);
+        const tempFiles = fs.readdirSync(UPLOAD_TEMP_DIR);
+        for (const name of tempFiles) {
+          // 文件名格式为 "<uploadId>-<originalName>"，取第一段作为 uploadId
+          const dashIdx = name.indexOf('-');
+          const fileUploadId = dashIdx >= 0 ? name.substring(0, dashIdx) : name;
+          if (!taskIdSet.has(fileUploadId)) continue;
+          try { fs.rmSync(path.join(UPLOAD_TEMP_DIR, name), { recursive: true, force: true }); } catch (_) {}
+        }
+      }
+    } catch (_) {}
+
+    if (!removeFiles || !group) {
+      uploadGroups.delete(groupId);
+      return res.json({ success: true, groupId, cancelled: true, cleaned: 0 });
+    }
+
+    // 延迟 300ms 让正在 rename 的 moveTempFile 操作完成，再统一清理落盘文件
+    setTimeout(() => {
+      let cleaned = 0;
+      const writtenPaths = group ? Array.from(group.writtenPaths) : [];
+
+      for (const p of writtenPaths) {
+        try {
+          validatePath(path.relative(FILES_ROOT, p), FILES_ROOT);
+          fs.rmSync(p, { force: true });
+          cleaned++;
+        } catch (_) {}
+      }
+
+      // 尝试递归删除分组根目录（如果是由此次上传创建的文件夹）
+      if (group && group.groupRootPath) {
+        try {
+          const rootAbs = validatePath(group.groupRootPath, FILES_ROOT);
+          if (fs.existsSync(rootAbs)) {
+            fs.rmSync(rootAbs, { recursive: true, force: true });
+            cleaned++;
+          }
+        } catch (_) {}
+      }
+
+      uploadGroups.delete(groupId);
+    }, 300);
+
+    res.json({ success: true, groupId, cancelled: true, cleaned: -1 }); // cleaned=-1 表示异步清理中
+  } catch (err) {
+    console.error('Error in POST /api/files/upload/cancel-group:', err);
+    res.status(500).json({ error: 'Failed to cancel group upload' });
   }
 });
 
@@ -646,11 +806,71 @@ app.get('/api/files/upload-progress', (req, res) => {
   // Poll uploadProgress map every 500ms and send updates
   const interval = setInterval(() => {
     try {
-      const data = {};
+      // tasks：所有任务条目（去掉内部 _speedSamples 不对外暴露）
+      const tasks = {};
       for (const [key, value] of uploadProgress) {
-        data[key] = value;
+        const { _speedSamples, ...rest } = value;
+        tasks[key] = rest;
       }
-      res.write(`event: progress\ndata: ${JSON.stringify(data)}\n\n`);
+
+      // groups：聚合每个分组的进度、速率、状态
+      const groups = {};
+      for (const [gid, group] of uploadGroups) {
+        let totalBytes = 0;
+        let bytesUploaded = 0;
+        let speed = 0;
+        let doneCount = 0;
+        let errorCount = 0;
+        let canceledCount = 0;
+        let uploadingCount = 0;
+        const taskCount = group.taskIds.size;
+
+        for (const tid of group.taskIds) {
+          const t = uploadProgress.get(tid);
+          if (!t) continue;
+          totalBytes += t.total || 0;
+          bytesUploaded += t.loaded || 0;
+          if (t.status === 'uploading' || t.status === 'processing') {
+            speed += t.speed || 0;
+            uploadingCount++;
+          } else if (t.status === 'done') {
+            doneCount++;
+          } else if (t.status === 'error') {
+            errorCount++;
+          } else if (t.status === 'canceled') {
+            canceledCount++;
+          }
+        }
+
+        // 推导分组状态
+        let groupStatus = 'uploading';
+        if (group.cancelled || canceledCount === taskCount) {
+          groupStatus = 'canceled';
+        } else if (uploadingCount === 0 && taskCount > 0) {
+          if (errorCount > 0) {
+            groupStatus = doneCount > 0 ? 'done-with-errors' : 'error';
+          } else {
+            groupStatus = 'done';
+          }
+        }
+
+        groups[gid] = {
+          groupId: gid,
+          rootLabel: group.rootLabel,
+          groupRootPath: group.groupRootPath,
+          taskCount,
+          totalBytes,
+          bytesUploaded,
+          speed,
+          status: groupStatus,
+          doneCount,
+          errorCount,
+          canceledCount,
+          uploadingCount,
+        };
+      }
+
+      res.write(`event: progress\ndata: ${JSON.stringify({ tasks, groups })}\n\n`);
     } catch (writeErr) {
       // Client disconnected
       clearInterval(interval);
