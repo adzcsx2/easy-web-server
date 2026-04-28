@@ -376,144 +376,201 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 }
 .content.drop-active .drop-overlay-text { display: block; }
 
-/* ===== Upload Progress Panel ===== */
-.upload-panel {
-  margin-bottom: 20px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-.upload-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--line);
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-.upload-panel-header .badge {
+/* ===== Upload FAB + History Panel ===== */
+.upload-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   background: var(--primary);
   color: #fff;
-  font-size: 0.7rem;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 600;
-  margin-left: 8px;
-}
-.upload-panel-list {
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.upload-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line);
-  transition: opacity 0.3s, max-height 0.3s;
-  max-height: 60px;
-  overflow: hidden;
-}
-.upload-item:last-child { border-bottom: none; }
-.upload-item.hiding {
-  opacity: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-.upload-item-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  font-size: 14px;
+  font-size: 22px;
+  z-index: 1000;
+  transition: transform 0.2s, box-shadow 0.2s;
 }
-.upload-item-icon.uploading { background: var(--primary-soft); color: var(--primary); animation: pulse 1.5s infinite; }
-.upload-item-icon.done { background: var(--success-soft); color: var(--success); }
-.upload-item-icon.error { background: var(--danger-soft); color: var(--danger); }
-.upload-item-icon.processing { background: var(--warning-soft); color: var(--warning); }
+.upload-fab:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+.upload-fab .fab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+.upload-fab.fab-hidden { display: none; }
 
-.upload-item-info {
+.upload-history-panel {
+  position: fixed;
+  bottom: 88px;
+  right: 28px;
+  width: 420px;
+  max-height: 60vh;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.upload-history-panel.panel-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+}
+.upload-panel-head {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  flex-shrink: 0;
+}
+.upload-panel-head-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+.upload-panel-head .badge {
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+.upload-panel-head-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: color 0.15s;
+}
+.upload-panel-head-btn:hover { color: var(--text); background: var(--line); }
+.upload-panel-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 分组行 */
+.upload-group-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: default;
+}
+.upload-group-row:last-child { border-bottom: none; }
+.upload-group-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.upload-group-info {
   flex: 1;
   min-width: 0;
 }
-.upload-item-name {
-  font-size: 0.8rem;
+.upload-group-label {
+  font-size: 0.82rem;
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.upload-item-name .tag {
-  font-size: 0.65rem;
-  padding: 1px 5px;
-  border-radius: 3px;
-  margin-left: 6px;
-  font-weight: 600;
+.upload-group-meta {
+  font-size: 0.73rem;
+  color: var(--muted);
+  margin-top: 2px;
 }
-.upload-item-name .tag-mine { background: var(--primary-soft); color: var(--primary); }
-.upload-item-name .tag-other { background: var(--warning-soft); color: var(--warning); }
-
-.upload-item-progress {
-  height: 4px;
+.upload-group-progress {
+  height: 3px;
   background: var(--bg);
   border-radius: 2px;
   overflow: hidden;
-  margin-top: 4px;
+  margin-top: 5px;
 }
-.upload-item-progress-bar {
+.upload-group-bar {
   height: 100%;
   border-radius: 2px;
-  transition: width 0.3s ease;
   background: var(--primary);
+  transition: width 0.3s ease;
 }
-.upload-item-progress-bar.done { background: var(--success); }
-.upload-item-progress-bar.error { background: var(--danger); }
-.upload-item-progress-bar.striped {
-  background-image: linear-gradient(
-    45deg,
-    rgba(255,255,255,0.15) 25%, transparent 25%,
-    transparent 50%, rgba(255,255,255,0.15) 50%,
-    rgba(255,255,255,0.15) 75%, transparent 75%
-  );
-  background-size: 40px 40px;
+.upload-group-bar.bar-done { background: var(--success); }
+.upload-group-bar.bar-error { background: var(--danger); }
+.upload-group-bar.bar-canceled { background: var(--muted); }
+.upload-group-bar.bar-striped {
+  background-image: linear-gradient(45deg, rgba(255,255,255,0.2) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.2) 75%, transparent 75%);
+  background-size: 30px 30px;
   animation: progressBar 1s linear infinite;
 }
-
-.upload-item-status {
-  font-size: 0.75rem;
-  color: var(--muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-  min-width: 40px;
-  text-align: right;
-}
-
-.upload-item-cancel {
+.upload-group-action {
   background: none;
-  border: none;
+  border: 1px solid var(--line);
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.8rem;
-  padding: 2px 6px;
+  font-size: 0.73rem;
+  padding: 3px 8px;
   border-radius: 4px;
   flex-shrink: 0;
-  opacity: 0.5;
+  white-space: nowrap;
   transition: all 0.15s;
 }
-.upload-item-cancel:hover {
-  color: var(--danger);
-  opacity: 1;
-  background: var(--danger-soft);
+.upload-group-action:hover { color: var(--danger); border-color: var(--danger); background: var(--danger-soft); }
+.upload-group-action.action-remove:hover { color: var(--muted); border-color: var(--muted); background: var(--bg); }
+.upload-group-speed {
+  font-size: 0.73rem;
+  color: var(--primary);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 60px;
+  text-align: right;
+  margin-right: 6px;
+}
+
+
+/* 空状态 */
+.upload-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .upload-history-panel {
+    right: 0;
+    left: 0;
+    width: 100%;
+    bottom: 80px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    max-height: 70vh;
+  }
+  .upload-fab {
+    right: 16px;
+    bottom: 16px;
+  }
 }
 
 /* ===== Site Banner ===== */
@@ -905,14 +962,6 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   <div class="content" id="contentArea">
     <div class="drop-overlay-text">松开以上传文件/文件夹</div>
 
-    <!-- Upload Progress -->
-    <div class="upload-panel" id="uploadPanel" style="display:none;">
-      <div class="upload-panel-header">
-        <span>传输列表 <span class="badge" id="uploadCount">0</span></span>
-      </div>
-      <div class="upload-panel-list" id="uploadList"></div>
-    </div>
-
     <!-- Site Banner -->
     <div class="site-banner" id="siteBanner" style="display:none;">
       <span class="site-banner-icon">&#9741;</span>
@@ -999,6 +1048,28 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   </div>
 </div>
 
+<!-- ===== Upload FAB ===== -->
+<button class="upload-fab fab-hidden" id="uploadFab" aria-label="上传传输列表" onclick="toggleUploadPanel()">
+  &#8679;
+  <span class="fab-badge" id="fabBadge" style="display:none;">0</span>
+</button>
+
+<!-- ===== Upload History Panel ===== -->
+<div class="upload-history-panel panel-hidden" id="uploadHistoryPanel" role="dialog" aria-label="传输历史">
+  <!-- 列表视图 -->
+  <div id="uploadPanelListView">
+    <div class="upload-panel-head">
+      <span class="upload-panel-head-title">传输列表</span>
+      <span class="badge" id="uploadActiveBadge" style="display:none;">0</span>
+      <button class="upload-panel-head-btn" id="clearDoneBtn" onclick="clearCompletedGroups()" title="清空已完成">&#10005; 清空完成</button>
+      <button class="upload-panel-head-btn" onclick="toggleUploadPanel()" title="关闭">&#10005;</button>
+    </div>
+    <div class="upload-panel-body" id="uploadGroupList">
+      <div class="upload-empty" id="uploadEmptyTip">暂无传输记录</div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Toast Container ===== -->
 <div class="toast-container" id="toastContainer"></div>
 
@@ -1007,13 +1078,220 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 let currentPath = '';
 let fileList = [];
 let isCurrentSite = false;
-let globalUploads = new Map();
 let uploadQueue = [];
 let activeXhrs = new Map();  // uploadId -> XMLHttpRequest
 let activeUploads = 0;
 const MAX_CONCURRENT = 5;
 let deleteTarget = null;
 let evtSource = null;
+
+/* ===== UploadStore ===== */
+// 统一管理上传任务（task）和分组（group），驱动 FAB + 历史面板渲染
+const UploadStore = (() => {
+  const tasks = new Map();   // uploadId -> UploadTask
+  const groups = new Map();  // groupId  -> UploadGroup
+  const listeners = new Set();
+  let renderTimer = null;
+
+  function emit() {
+    if (renderTimer) return;
+    renderTimer = requestAnimationFrame(() => {
+      renderTimer = null;
+      for (const fn of listeners) fn();
+    });
+  }
+
+  function subscribe(fn) { listeners.add(fn); }
+
+  // 生成 groupId：crypto.randomUUID 或 fallback
+  function genGroupId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return 'grp_' + crypto.randomUUID().replace(/-/g, '').substring(0, 12);
+    return 'grp_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 7);
+  }
+
+  // 注册分组
+  function registerGroup(groupId, kind, rootLabel, targetBasePath, groupRootPath) {
+    if (!groups.has(groupId)) {
+      groups.set(groupId, {
+        id: groupId,
+        kind,          // 'file' | 'folder'
+        rootLabel,
+        targetBasePath,
+        groupRootPath, // 相对路径（用于服务端清理）
+        taskIds: [],
+        createdAt: Date.now(),
+        lastSpeed: 0,  // 最后一次非零聚合速率，用于避免任务切换间隙速率闪烁
+      });
+    }
+    return groups.get(groupId);
+  }
+
+  // 注册任务
+  function registerTask(uploadId, groupId, displayName, relativePath, totalBytes) {
+    tasks.set(uploadId, {
+      id: uploadId,
+      groupId,
+      displayName,
+      relativePath,
+      totalBytes,
+      bytesUploaded: 0,
+      speed: 0,
+      status: 'queued',
+      errorMsg: '',
+      startedAt: null,
+      finishedAt: null,
+    });
+    const g = groups.get(groupId);
+    if (g && !g.taskIds.includes(uploadId)) g.taskIds.push(uploadId);
+    emit();
+  }
+
+  // 更新任务字段
+  function updateTask(uploadId, fields) {
+    const t = tasks.get(uploadId);
+    if (!t) return;
+    Object.assign(t, fields);
+    emit();
+  }
+
+  // 计算分组聚合数据
+  function computeGroupAggregate(groupId) {
+    const g = groups.get(groupId);
+    if (!g) return null;
+    let totalBytes = 0, bytesUploaded = 0, speed = 0;
+    let done = 0, error = 0, canceled = 0, uploading = 0, queued = 0;
+    for (const tid of g.taskIds) {
+      const t = tasks.get(tid);
+      if (!t) continue;
+      totalBytes += t.totalBytes || 0;
+      bytesUploaded += t.bytesUploaded || 0;
+      if (t.status === 'uploading' || t.status === 'processing') { speed += t.speed || 0; uploading++; }
+      else if (t.status === 'done') done++;
+      else if (t.status === 'error') error++;
+      else if (t.status === 'canceled') canceled++;
+      else queued++;
+    }
+    const total = g.taskIds.length;
+    let status;
+    if (total === 0) status = 'done';
+    else if (uploading > 0 || queued > 0) status = 'uploading';
+    else if (error > 0 && done === 0) status = 'error';
+    else if (error > 0) status = 'done-with-errors';
+    else if (canceled === total) status = 'canceled';
+    else status = 'done';
+    const pct = totalBytes > 0 ? Math.round((bytesUploaded / totalBytes) * 100) : (status === 'done' || status === 'done-with-errors' ? 100 : 0);
+    // 速率平滑：组仍在活跃上传时，若本次聚合速率为 0（任务切换间隙），保留上一次非零速率
+    const isActive = uploading > 0 || queued > 0;
+    if (speed > 0) {
+      g.lastSpeed = speed;
+    } else if (isActive && g.lastSpeed > 0) {
+      speed = g.lastSpeed;
+    }
+    if (!isActive) g.lastSpeed = 0;
+    return { totalBytes, bytesUploaded, speed, status, pct, done, error, canceled, uploading, queued, total };
+  }
+
+  // 取消单个任务
+  function cancelTask(uploadId, removeFiles) {
+    const t = tasks.get(uploadId);
+    if (!t) return;
+    const isTerminal = t.status === 'done' || t.status === 'error' || t.status === 'canceled';
+    // 先取消队列中的任务
+    const qIdx = uploadQueue.findIndex(task => task.id === uploadId);
+    if (qIdx >= 0) uploadQueue.splice(qIdx, 1);
+    // 中止 XHR
+    const xhr = activeXhrs.get(uploadId);
+    if (xhr) { xhr.__cancelled = true; xhr.abort(); }
+    // 通知服务端
+    fetch('/api/files/upload/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uploadId, removeFiles: removeFiles && !isTerminal }),
+    }).catch(() => {});
+    if (!isTerminal) {
+      updateTask(uploadId, { status: 'canceled', finishedAt: Date.now() });
+    }
+  }
+
+  // 取消整个分组
+  function cancelGroup(groupId, removeFiles) {
+    const g = groups.get(groupId);
+    if (!g) return;
+    const allTerminal = g.taskIds.every(tid => {
+      const t = tasks.get(tid);
+      return !t || t.status === 'done' || t.status === 'error' || t.status === 'canceled';
+    });
+    if (allTerminal) return; // 已完成不能批量取消
+
+    // 用 Set 一次性过滤队列，避免 O(N²) 嵌套查找
+    const cancelledIds = new Set(g.taskIds);
+    uploadQueue = uploadQueue.filter(task => !cancelledIds.has(task.id));
+
+    const now = Date.now();
+    for (const tid of g.taskIds) {
+      const t = tasks.get(tid);
+      if (!t) continue;
+      if (t.status === 'done' || t.status === 'error' || t.status === 'canceled') continue;
+      // 中止活跃 XHR
+      const xhr = activeXhrs.get(tid);
+      if (xhr) { xhr.__cancelled = true; xhr.abort(); }
+      // 直接修改状态，不触发单次 emit（统一在循环后 emit 一次）
+      t.status = 'canceled';
+      t.finishedAt = now;
+    }
+
+    fetch('/api/files/upload/cancel-group', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupId, removeFiles }),
+    }).catch(() => {});
+    emit();
+  }
+
+  // 从历史中移除（不影响服务端文件）
+  function removeFromHistory(groupId) {
+    const g = groups.get(groupId);
+    if (!g) return;
+    for (const tid of g.taskIds) tasks.delete(tid);
+    groups.delete(groupId);
+    emit();
+  }
+
+  // 清除所有已完成的分组
+  function clearCompleted() {
+    for (const [gid] of groups) {
+      const agg = computeGroupAggregate(gid);
+      if (agg && agg.status !== 'uploading') removeFromHistory(gid);
+    }
+    emit();
+  }
+
+  // SSE 同步：用服务端 tasks 数据更新速率和状态（不覆盖客户端已知的终态）
+  function syncFromSSE(sseTasks, sseGroups) {
+    let changed = false;
+    if (sseTasks) {
+      for (const [uid, st] of Object.entries(sseTasks)) {
+        const t = tasks.get(uid);
+        if (!t) continue;
+        let newStatus = t.status;
+        let newSpeed = t.speed; // 默认保留客户端 speed，不被服务端覆盖
+        // 只在服务端报告 processing 时切换状态并清零速率（传输完毕等待写盘）
+        if (st.status === 'processing' && t.status === 'uploading') {
+          newStatus = 'processing';
+          newSpeed = 0;
+        }
+        if (t.speed !== newSpeed || t.status !== newStatus) {
+          t.speed = newSpeed;
+          t.status = newStatus;
+          changed = true;
+        }
+      }
+    }
+    if (changed) emit();
+  }
+
+  return { tasks, groups, subscribe, emit, genGroupId, registerGroup, registerTask, updateTask, computeGroupAggregate, cancelTask, cancelGroup, removeFromHistory, clearCompleted, syncFromSSE };
+})();
 
 /* ===== Utilities ===== */
 function escapeHtml(str) {
@@ -1439,19 +1717,21 @@ function setupUploadModalDrop() {
         const files = await collectFilesFromEntries(entries);
         if (files.length) {
           const hasRelativePath = files.some(f => f.webkitRelativePath);
-          if (hasRelativePath) {
-            queueFolderUploads(files);
-          } else {
-            queueUploads(files);
-          }
-          closeUploadModal();
+          closeUploadModal(); // 先关闭弹窗
+          setTimeout(() => {
+            if (hasRelativePath) {
+              queueFolderUploads(files);
+            } else {
+              queueUploads(files);
+            }
+          }, 0);
         }
       }
     } else {
       const files = e.dataTransfer.files;
       if (files && files.length) {
-        queueUploads(Array.from(files));
         closeUploadModal();
+        setTimeout(() => queueUploads(Array.from(files)), 0);
       }
     }
   });
@@ -1461,88 +1741,107 @@ function handleFileSelect(event) {
   const files = event.target.files;
   if (files && files.length) {
     const filesArray = Array.from(files);
-    // Check if any file has webkitRelativePath (folder upload)
     const hasRelativePath = filesArray.some(f => f.webkitRelativePath);
-    if (hasRelativePath) {
-      queueFolderUploads(filesArray);
-    } else {
-      queueUploads(filesArray);
-    }
+    // 先关闭弹窗，让视觉反馈立即生效，再异步处理队列
     closeUploadModal();
+    setTimeout(() => {
+      if (hasRelativePath) {
+        queueFolderUploads(filesArray);
+      } else {
+        queueUploads(filesArray);
+      }
+    }, 0);
   }
   event.target.value = '';
 }
 
+// 防抖刷新文件列表（同一批次最多触发一次）
+let _loadFilesTimer = null;
+function scheduleLoadFiles() {
+  if (_loadFilesTimer) return;
+  _loadFilesTimer = setTimeout(() => {
+    _loadFilesTimer = null;
+    loadFiles();
+    loadFolderTree();
+  }, 300);
+}
+
 function queueUploads(files) {
+  if (files.length === 0) return;
+  // 每个独立文件一个分组（kind='file'）
   files.forEach(file => {
-    const task = createUploadTask(file);
-    uploadQueue.push(task);
+    const groupId = UploadStore.genGroupId();
+    const uploadId = 'up_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+    UploadStore.registerGroup(groupId, 'file', file.name, currentPath, '');
+    UploadStore.registerTask(uploadId, groupId, file.name, '', file.size);
+    uploadQueue.push({ id: uploadId, file, groupId });
   });
-  renderUploadPanel();
   processQueue();
+}
+
+// 批量注册任务（不触发 emit，批量完成后统一 emit）
+function _registerTaskBulk(uploadId, groupId, displayName, relativePath, totalBytes) {
+  UploadStore.tasks.set(uploadId, {
+    id: uploadId, groupId, displayName, relativePath, totalBytes,
+    bytesUploaded: 0, speed: 0, status: 'queued',
+    errorMsg: '', startedAt: null, finishedAt: null,
+  });
+  const g = UploadStore.groups.get(groupId);
+  if (g && !g.taskIds.includes(uploadId)) g.taskIds.push(uploadId);
 }
 
 function queueFolderUploads(files) {
-  files.forEach(file => {
-    // Ensure targetSubPath is set
-    if (!file.targetSubPath) {
-      const rp = file.webkitRelativePath || file._relativePath || '';
-      if (rp.includes('/')) {
-        const parts = rp.split('/');
-        parts.pop(); // Remove filename
-        file.targetSubPath = parts.join('/');
-      }
-    }
-    const task = createUploadTask(file);
-    uploadQueue.push(task);
-  });
-
-  renderUploadPanel();
-  processQueue();
-}
-
-function createUploadTask(file) {
-  const uploadId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-  const displayName = file.webkitRelativePath || file._relativePath || file.name;
-
-  globalUploads.set(uploadId, {
-    id: uploadId,
-    name: displayName,
-    progress: 0,
-    status: 'queued',
-  });
-
-  return {
-    id: uploadId,
-    file,
-  };
-}
-
-function removeQueuedTaskById(uploadId) {
-  const idx = uploadQueue.findIndex(task => task.id === uploadId);
-  if (idx >= 0) {
-    uploadQueue.splice(idx, 1);
-    return true;
+  if (files.length === 0) return;
+  // 按顶层目录分组
+  const topFolderMap = new Map(); // topFolder -> [file, ...]
+  for (const file of files) {
+    const rp = file.webkitRelativePath || file._relativePath || '';
+    const topFolder = rp.includes('/') ? rp.split('/')[0] : '__flat__';
+    if (!topFolderMap.has(topFolder)) topFolderMap.set(topFolder, []);
+    topFolderMap.get(topFolder).push(file);
   }
-  return false;
-}
 
-function notifyServerCancel(uploadId) {
-  fetch('/api/files/upload/cancel', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uploadId })
-  }).catch(() => {
-    // Ignore cancellation request failures on client side.
-  });
-}
+  // 先注册所有分组并立即 emit，让面板立刻显示分组行（无需等待文件注册完成）
+  const pending = []; // { groupId, file }[]
+  for (const [topFolder, groupFiles] of topFolderMap) {
+    const groupId = UploadStore.genGroupId();
+    const isFolder = topFolder !== '__flat__';
+    const rootLabel = isFolder ? topFolder : (groupFiles.length === 1 ? groupFiles[0].name : `${groupFiles.length} 个文件`);
+    const groupRootPath = isFolder
+      ? (currentPath ? currentPath + '/' + topFolder : topFolder)
+      : '';
+    UploadStore.registerGroup(groupId, isFolder ? 'folder' : 'file', rootLabel, currentPath, groupRootPath);
+    for (const file of groupFiles) pending.push({ groupId, file });
+  }
+  UploadStore.emit(); // 面板立即显示分组行
 
-function hideUploadNow(uploadId) {
-  hiddenGlobalIds.add(uploadId);
-  globalUploads.delete(uploadId);
-  const el = document.getElementById('upload-' + uploadId);
-  if (el) el.remove();
-  renderUploadPanel();
+  // 分片注册任务（每帧 300 个），避免主线程长时间阻塞
+  const CHUNK_SIZE = 300;
+  let idx = 0;
+  function registerChunk() {
+    const end = Math.min(idx + CHUNK_SIZE, pending.length);
+    for (; idx < end; idx++) {
+      const { groupId, file } = pending[idx];
+      if (!file.targetSubPath) {
+        const rp = file.webkitRelativePath || file._relativePath || '';
+        if (rp.includes('/')) {
+          const parts = rp.split('/');
+          parts.pop();
+          file.targetSubPath = parts.join('/');
+        }
+      }
+      const uploadId = 'up_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
+      const rp = file.webkitRelativePath || file._relativePath || file.name;
+      _registerTaskBulk(uploadId, groupId, file.name, rp, file.size);
+      uploadQueue.push({ id: uploadId, file, groupId });
+    }
+    UploadStore.emit();
+    processQueue(); // 每帧尽早启动可用上传 slot
+    if (idx < pending.length) {
+      requestAnimationFrame(registerChunk);
+    }
+  }
+  requestAnimationFrame(registerChunk);
 }
 
 function processQueue() {
@@ -1556,48 +1855,52 @@ function processQueue() {
 function startUpload(task) {
   const file = task.file;
   const uploadId = task.id;
+  const groupId = task.groupId;
 
   activeUploads++;
-
-  const current = globalUploads.get(uploadId);
-  if (current) {
-    current.status = 'uploading';
-    current.progress = current.progress || 0;
-  }
-  renderUploadPanel();
+  UploadStore.updateTask(uploadId, { status: 'uploading', startedAt: Date.now() });
 
   const fd = new FormData();
-  // If file has a subPath from folder upload, include it in targetPath
   const targetPath = file.targetSubPath
     ? (currentPath ? currentPath + '/' + file.targetSubPath : file.targetSubPath)
     : currentPath;
   fd.append('targetPath', targetPath);
   fd.append('files', file);
 
+  const rp = file.webkitRelativePath || file._relativePath || '';
+  const g = UploadStore.groups.get(groupId);
+  const groupRoot = g ? g.groupRootPath : '';
+  const rootLabel = g ? encodeURIComponent(g.rootLabel) : '';
+
+  const urlParams = new URLSearchParams({
+    uploadId,
+    groupId,
+    filename: file.name,
+    relPath: rp,
+    groupRoot,
+    rootLabel: g ? g.rootLabel : file.name,
+  });
   const xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/files/upload?uploadId=' + encodeURIComponent(uploadId) + '&filename=' + encodeURIComponent(file.name));
+  xhr.open('POST', '/api/files/upload?' + urlParams.toString());
   activeXhrs.set(uploadId, xhr);
 
-  let lastLoaded = 0;
-  let lastTime = Date.now();
+  // 1.5s 滑动窗口速率计算
+  const speedSamples = [];
 
   xhr.upload.onprogress = (e) => {
-    if (e.lengthComputable) {
-      const pct = Math.round((e.loaded / e.total) * 100);
-      const now = Date.now();
-      const elapsed = (now - lastTime) / 1000; // seconds
-      const speed = elapsed > 0 ? (e.loaded - lastLoaded) / elapsed : 0;
-      lastLoaded = e.loaded;
-      lastTime = now;
-
-      const info = globalUploads.get(uploadId);
-      if (info) {
-        info.progress = pct;
-        info.status = 'uploading';
-        info.speed = speed;
-      }
-      updateUploadItem(uploadId, pct, 'uploading', speed);
+    if (!e.lengthComputable) return;
+    const pct = Math.round((e.loaded / e.total) * 100);
+    const now = Date.now();
+    speedSamples.push({ t: now, loaded: e.loaded });
+    const cutoff = now - 1500;
+    while (speedSamples.length > 1 && speedSamples[0].t < cutoff) speedSamples.shift();
+    let speed = 0;
+    if (speedSamples.length >= 2) {
+      const dt = speedSamples[speedSamples.length - 1].t - speedSamples[0].t;
+      const dl = speedSamples[speedSamples.length - 1].loaded - speedSamples[0].loaded;
+      speed = dt > 0 ? Math.round((dl / dt) * 1000) : 0;
     }
+    UploadStore.updateTask(uploadId, { bytesUploaded: e.loaded, speed, status: 'uploading' });
   };
 
   xhr.onload = () => {
@@ -1605,57 +1908,42 @@ function startUpload(task) {
     let resp = null;
     try { resp = JSON.parse(xhr.responseText || '{}'); } catch (_) {}
 
-    const info = globalUploads.get(uploadId);
-
     if (xhr.__cancelled || (resp && resp.cancelled)) {
-      if (info) {
-        info.status = 'canceled';
-      }
-      updateUploadItem(uploadId, info ? info.progress || 0 : 0, 'canceled');
-      scheduleHideUpload(uploadId);
+      UploadStore.updateTask(uploadId, { status: 'canceled', speed: 0, finishedAt: Date.now() });
     } else if (xhr.status >= 200 && xhr.status < 300) {
-      if (info) {
-        info.progress = 100;
-        info.status = 'done';
+      const now = Date.now();
+      const t = UploadStore.tasks.get(uploadId);
+      // 小文件 onprogress 可能只触发一次导致速率为 0，用耗时估算
+      let finalSpeed = 0;
+      if (t && t.startedAt && file.size > 0) {
+        const elapsed = now - t.startedAt;
+        if (elapsed > 0) finalSpeed = Math.round((file.size / elapsed) * 1000);
       }
-      updateUploadItem(uploadId, 100, 'done');
-      scheduleHideUpload(uploadId);
-      showToast(`${file.name} 上传成功`, 'success');
-      loadFiles();
-      loadFolderTree();
+      // 将本次估算速率写入 lastSpeed，避免分组聚合间隙显示 0
+      const g = UploadStore.groups.get(groupId);
+      if (g && finalSpeed > 0) g.lastSpeed = finalSpeed;
+      UploadStore.updateTask(uploadId, { status: 'done', bytesUploaded: file.size, speed: 0, finishedAt: now });
     } else {
-      if (info) {
-        info.status = 'error';
-      }
-      updateUploadItem(uploadId, info ? info.progress || 0 : 0, 'error');
-      scheduleHideUpload(uploadId);
-      showToast(`${file.name} 上传失败`, 'error');
+      const msg = (resp && resp.error) ? resp.error : ('HTTP ' + xhr.status);
+      UploadStore.updateTask(uploadId, { status: 'error', speed: 0, errorMsg: msg, finishedAt: Date.now() });
     }
+    onTaskTerminal(uploadId);
     activeUploads--;
     processQueue();
   };
 
   xhr.onerror = () => {
     activeXhrs.delete(uploadId);
-    if (xhr.__cancelled) {
-      activeUploads--;
-      processQueue();
-      return;
-    }
-    const info = globalUploads.get(uploadId);
-    if (info) {
-      info.status = 'error';
-    }
-    updateUploadItem(uploadId, info ? info.progress || 0 : 0, 'error');
-    scheduleHideUpload(uploadId);
-    showToast(`${file.name} 上传失败`, 'error');
+    if (xhr.__cancelled) { activeUploads--; processQueue(); return; }
+    UploadStore.updateTask(uploadId, { status: 'error', speed: 0, errorMsg: '网络错误', finishedAt: Date.now() });
+    onTaskTerminal(uploadId);
     activeUploads--;
     processQueue();
   };
 
   xhr.onabort = () => {
     activeXhrs.delete(uploadId);
-    hideUploadNow(uploadId);
+    UploadStore.updateTask(uploadId, { status: 'canceled', speed: 0, finishedAt: Date.now() });
     activeUploads--;
     processQueue();
   };
@@ -1663,26 +1951,15 @@ function startUpload(task) {
   xhr.send(fd);
 }
 
-function cancelUpload(uploadId) {
-  const canceledFromQueue = removeQueuedTaskById(uploadId);
-  if (canceledFromQueue) {
-    const info = globalUploads.get(uploadId);
-    const name = info ? info.name : '文件';
-    notifyServerCancel(uploadId);
-    hideUploadNow(uploadId);
-    showToast(`${name} 已取消上传`, 'info');
-    return;
-  }
-
-  const xhr = activeXhrs.get(uploadId);
-  if (xhr) {
-    const info = globalUploads.get(uploadId);
-    const name = info ? info.name : '文件';
-    xhr.__cancelled = true;
-    notifyServerCancel(uploadId);
-    xhr.abort();
-    hideUploadNow(uploadId);
-    showToast(`${name} 已取消上传`, 'info');
+// 任务终止时检查分组是否全部完成，若是则刷新文件列表
+function onTaskTerminal(uploadId) {
+  const t = UploadStore.tasks.get(uploadId);
+  if (!t) return;
+  const g = UploadStore.groups.get(t.groupId);
+  if (!g) { scheduleLoadFiles(); return; }
+  const agg = UploadStore.computeGroupAggregate(t.groupId);
+  if (agg && agg.uploading === 0 && agg.queued === 0) {
+    scheduleLoadFiles();
   }
 }
 
@@ -1693,129 +1970,6 @@ function formatSpeed(bytesPerSec) {
   return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
 }
 
-function updateUploadItem(uploadId, progress, status, speed) {
-  const el = document.getElementById('upload-' + uploadId);
-  if (!el) return;
-  const bar = el.querySelector('.upload-item-progress-bar');
-  const statusEl = el.querySelector('.upload-item-status');
-  const iconEl = el.querySelector('.upload-item-icon');
-
-  if (bar) {
-    bar.style.width = progress + '%';
-    bar.className = 'upload-item-progress-bar' +
-      (status === 'done' ? ' done' : '') +
-      (status === 'error' ? ' error' : '') +
-      (status === 'uploading' ? ' striped' : '');
-  }
-  if (statusEl) {
-    let text;
-    if (status === 'uploading') {
-      const speedText = speed != null ? ' ' + formatSpeed(speed) : '';
-      text = progress + '%' + speedText;
-    } else {
-      const statusMap = { queued: '排队中', processing: '处理中...', done: '完成', error: '失败', canceled: '已取消' };
-      text = statusMap[status] || '';
-    }
-    statusEl.textContent = text;
-  }
-  if (iconEl) {
-    iconEl.className = 'upload-item-icon ' + status;
-    const iconMap = {
-      queued: '&#8942;',
-      uploading: '&#8593;',
-      processing: '&#8987;',
-      done: '&#10003;',
-      error: '&#10007;',
-      canceled: '&#10005;'
-    };
-    iconEl.innerHTML = iconMap[status] || '&#8593;';
-  }
-}
-
-const hiddenGlobalIds = new Set();
-
-function scheduleHideUpload(uploadId) {
-  if (hiddenGlobalIds.has(uploadId)) return;
-  hiddenGlobalIds.add(uploadId);
-
-  setTimeout(() => {
-    const el = document.getElementById('upload-' + uploadId);
-    if (el) {
-      el.classList.add('hiding');
-      setTimeout(() => {
-        el.remove();
-        globalUploads.delete(uploadId);
-        renderUploadPanel();
-      }, 300);
-    }
-  }, 5000);
-}
-
-function renderUploadPanel() {
-  const panel = document.getElementById('uploadPanel');
-  const list = document.getElementById('uploadList');
-  const countEl = document.getElementById('uploadCount');
-
-  const allUploads = [...globalUploads.values()];
-  const activeCount = allUploads.filter(u => u.status === 'uploading' || u.status === 'processing').length;
-
-  if (allUploads.length === 0) {
-    panel.style.display = 'none';
-    return;
-  }
-
-  panel.style.display = 'block';
-  countEl.textContent = activeCount;
-
-  // Build list - only add items that don't exist yet
-  allUploads.forEach(u => {
-    const id = u.id;
-    const existing = document.getElementById('upload-' + id);
-    if (existing) return;
-
-    const div = document.createElement('div');
-    div.className = 'upload-item fade-in';
-    div.id = 'upload-' + id;
-
-    const statusClass = u.status || 'uploading';
-    const iconMap = {
-      queued: '&#8942;',
-      uploading: '&#8593;',
-      processing: '&#8987;',
-      done: '&#10003;',
-      error: '&#10007;',
-      canceled: '&#10005;'
-    };
-    const statusTextMap = {
-      queued: '排队中',
-      uploading: (u.progress || 0) + '%',
-      processing: '处理中...',
-      done: '完成',
-      error: '失败',
-      canceled: '已取消'
-    };
-
-    const canCancel = statusClass === 'queued' || ((statusClass === 'uploading' || statusClass === 'processing') && activeXhrs.has(id));
-    const cancelBtn = canCancel
-      ? `<button class="upload-item-cancel" onclick="cancelUpload('${id}')" title="取消">&#10005;</button>`
-      : '';
-
-    div.innerHTML = `
-      <div class="upload-item-icon ${statusClass}">${iconMap[statusClass] || '&#8593;'}</div>
-      <div class="upload-item-info">
-        <div class="upload-item-name">${u.name}</div>
-        <div class="upload-item-progress">
-          <div class="upload-item-progress-bar${statusClass === 'uploading' ? ' striped' : ''}${statusClass === 'done' ? ' done' : ''}${statusClass === 'error' ? ' error' : ''}" style="width:${u.progress || 0}%"></div>
-        </div>
-      </div>
-      <div class="upload-item-status">${statusTextMap[statusClass] || ''}</div>
-      ${cancelBtn}
-    `;
-
-    list.appendChild(div);
-  });
-}
-
 /* ===== SSE Connection ===== */
 function connectSSE() {
   try {
@@ -1823,94 +1977,229 @@ function connectSSE() {
     evtSource.addEventListener('progress', (e) => {
       try {
         const data = JSON.parse(e.data);
-        renderGlobalProgress(data);
-      } catch (err) {
-        // Ignore parse errors
-      }
+        // 新格式：{ tasks: {...}, groups: {...} }
+        if (data && data.tasks) {
+          UploadStore.syncFromSSE(data.tasks, data.groups);
+        }
+      } catch (_) {}
     });
-    evtSource.onerror = () => {
-      // Reconnect is handled automatically by EventSource
-    };
-  } catch (e) {
-    // SSE not available, that's okay
+    evtSource.onerror = () => {};
+  } catch (_) {}
+}
+
+// 速率衰减：超过 2.5s 无 progress 事件的上传任务，speed 衰减为 0
+setInterval(() => {
+  const now = Date.now();
+  let changed = false;
+  for (const [, t] of UploadStore.tasks) {
+    if ((t.status === 'uploading') && t.speed > 0) {
+      // 检查最后一次 XHR progress 是否超过 2.5s（通过 startedAt + bytesUploaded 无变化判断）
+      // 简单策略：如果任务存在但 XHR 不在 activeXhrs 里（已完成/中止），speed 清零
+      if (!activeXhrs.has(t.id)) {
+        t.speed = 0;
+        changed = true;
+      }
+    }
+  }
+  if (changed) UploadStore.emit();
+}, 2500);
+
+/* ===== FAB + Upload Panel UI ===== */
+let panelOpen = false;
+
+function toggleUploadPanel() {
+  panelOpen = !panelOpen;
+  renderUploadFab();
+}
+
+function clearCompletedGroups() {
+  UploadStore.clearCompleted();
+}
+
+function cancelGroupUI(groupId) {
+  // removeFiles=false：保留已上传的文件，只取消未完成的任务
+  UploadStore.cancelGroup(groupId, false);
+}
+
+function cancelTaskUI(uploadId) {
+  UploadStore.cancelTask(uploadId, true);
+}
+
+function removeGroupUI(groupId) {
+  UploadStore.removeFromHistory(groupId);
+}
+
+function removeTaskUI(uploadId) {
+  const t = UploadStore.tasks.get(uploadId);
+  if (!t) return;
+  // 已完成任务：仅从历史移除（不影响分组，只删除该任务条目）
+  UploadStore.tasks.delete(uploadId);
+  const g = UploadStore.groups.get(t.groupId);
+  if (g) {
+    const idx = g.taskIds.indexOf(uploadId);
+    if (idx >= 0) g.taskIds.splice(idx, 1);
+    if (g.taskIds.length === 0) UploadStore.groups.delete(t.groupId);
+  }
+  UploadStore.emit();
+}
+
+function renderUploadFab() {
+  const fab = document.getElementById('uploadFab');
+  const badge = document.getElementById('fabBadge');
+  const panel = document.getElementById('uploadHistoryPanel');
+  if (!fab || !panel) return;
+
+  const totalGroups = UploadStore.groups.size;
+  // 计算活跃组数（正在上传）
+  let activeCount = 0;
+  for (const [gid] of UploadStore.groups) {
+    const agg = UploadStore.computeGroupAggregate(gid);
+    if (agg && (agg.uploading > 0 || agg.queued > 0)) activeCount++;
+  }
+
+  // FAB 只在有任务时显示
+  if (totalGroups === 0) {
+    fab.classList.add('fab-hidden');
+    panel.classList.add('panel-hidden');
+    panelOpen = false;
+    return;
+  }
+  fab.classList.remove('fab-hidden');
+
+  if (activeCount > 0) {
+    badge.textContent = activeCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  if (panelOpen) {
+    panel.classList.remove('panel-hidden');
+    renderUploadPanel();
+  } else {
+    panel.classList.add('panel-hidden');
   }
 }
 
-function renderGlobalProgress(data) {
-  if (!data || typeof data !== 'object') return;
+function renderUploadPanel() {
+  const listView = document.getElementById('uploadPanelListView');
+  if (!listView) return;
 
-  // Diff: update existing entries, add new ones, remove stale ones
-  const serverIds = new Set();
-  let hasChanges = false;
+  // 更新活跃徽章
+  const activeBadge = document.getElementById('uploadActiveBadge');
+  let activeCount = 0;
+  for (const [gid] of UploadStore.groups) {
+    const agg = UploadStore.computeGroupAggregate(gid);
+    if (agg && (agg.uploading > 0 || agg.queued > 0)) activeCount++;
+  }
+  if (activeBadge) {
+    activeBadge.textContent = activeCount;
+    activeBadge.style.display = activeCount > 0 ? 'inline-flex' : 'none';
+  }
 
-  Object.values(data).forEach(item => {
-    const id = item.uploadId || item.id;
-    if (!id) return;
+  listView.style.display = 'block';
+  renderGroupList();
+}
 
-    // Canceled uploads should not appear in transfer list.
-    if (item.status === 'canceled') {
-      hiddenGlobalIds.add(id);
-      globalUploads.delete(id);
-      const el = document.getElementById('upload-' + id);
+function renderGroupList() {
+  const container = document.getElementById('uploadGroupList');
+  const emptyTip = document.getElementById('uploadEmptyTip');
+  if (!container) return;
+
+  const groups = [...UploadStore.groups.values()];
+  if (groups.length === 0) {
+    if (emptyTip) emptyTip.style.display = 'block';
+    // 清除所有分组行
+    container.querySelectorAll('.upload-group-row').forEach(el => el.remove());
+    return;
+  }
+  if (emptyTip) emptyTip.style.display = 'none';
+
+  // 按 createdAt 降序（新的在前）
+  groups.sort((a, b) => b.createdAt - a.createdAt);
+
+  const existingIds = new Set([...container.querySelectorAll('.upload-group-row')].map(el => el.dataset.gid));
+  const currentIds = new Set(groups.map(g => g.id));
+
+  // 移除不存在的行
+  for (const id of existingIds) {
+    if (!currentIds.has(id)) {
+      const el = container.querySelector(`[data-gid="${CSS.escape(id)}"]`);
       if (el) el.remove();
-      return;
     }
+  }
 
-    serverIds.add(id);
-    // Skip entries already hidden
-    if (hiddenGlobalIds.has(id)) return;
+  for (const g of groups) {
+    const agg = UploadStore.computeGroupAggregate(g.id);
+    if (!agg) continue;
+    const isActive = agg.uploading > 0 || agg.queued > 0;
+    const isTerminal = !isActive;
+    const barClass = agg.status === 'done' || agg.status === 'done-with-errors' ? 'bar-done'
+      : agg.status === 'error' ? 'bar-error'
+      : agg.status === 'canceled' ? 'bar-canceled'
+      : isActive ? 'bar-striped' : '';
+    const statusText = agg.status === 'done' ? (agg.canceled > 0 ? '已取消（部分已上传）' : '已完成')
+      : agg.status === 'done-with-errors' ? '完成(有错误)'
+      : agg.status === 'error' ? '失败'
+      : agg.status === 'canceled' ? '已取消'
+      : agg.queued > 0 && agg.uploading === 0 ? '排队中'
+      : '上传中';
+    const speedText = isActive && agg.speed > 0 ? formatSpeed(agg.speed) : '';
+    const icon = g.kind === 'folder' ? '&#128193;' : '&#128196;';
+    const actionLabel = isTerminal ? '移除' : '取消';
+    const actionClass = isTerminal ? 'action-remove' : '';
+    const actionFn = isTerminal
+      ? `removeGroupUI('${escapeHtml(g.id)}')`
+      : `cancelGroupUI('${escapeHtml(g.id)}')`;
+    const countText = g.kind === 'folder' ? ` · ${agg.done + agg.error + agg.canceled}/${agg.total} 个文件` : '';
 
-    const existing = globalUploads.get(id);
-    const isUpdate = !!existing;
-
-    globalUploads.set(id, {
-      id: id,
-      name: item.filename || item.name || (existing ? existing.name : '未知文件'),
-      progress: item.percent || item.progress || (existing ? existing.progress : 0),
-      status: item.status || 'uploading',
-      speed: existing ? existing.speed : null,
-    });
-
-    if (isUpdate) {
-      const serverProgress = item.percent || item.progress || 0;
-      const existingProgress = existing ? existing.progress : 0;
-      const displayProgress = Math.max(serverProgress, existingProgress);
-      const entry = globalUploads.get(id);
-      if (entry) entry.progress = displayProgress;
-      updateUploadItem(id, displayProgress, item.status || 'uploading', existing ? existing.speed : null);
+    const existing = container.querySelector(`[data-gid="${CSS.escape(g.id)}"]`);
+    if (existing) {
+      // 更新已有行
+      existing.className = 'upload-group-row';
+      existing.removeAttribute('onclick');
+      const bar = existing.querySelector('.upload-group-bar');
+      if (bar) { bar.style.width = agg.pct + '%'; bar.className = 'upload-group-bar ' + barClass; }
+      const metaEl = existing.querySelector('.upload-group-meta');
+      if (metaEl) metaEl.textContent = statusText + countText;
+      const speedEl = existing.querySelector('.upload-group-speed');
+      if (speedEl) speedEl.textContent = speedText;
+      const btn = existing.querySelector('.upload-group-action');
+      if (btn) { btn.textContent = actionLabel; btn.className = 'upload-group-action ' + actionClass; btn.setAttribute('onclick', actionFn); }
     } else {
-      hasChanges = true;
-    }
-
-    // Schedule hide for completed items (only once, when status first changes)
-    if (item.status === 'done' || item.status === 'error') {
-      if (!existing || (existing.status !== 'done' && existing.status !== 'error')) {
-        scheduleHideUpload(id);
+      // 新增行
+      const div = document.createElement('div');
+      div.className = 'upload-group-row';
+      div.dataset.gid = g.id;
+      div.innerHTML = `
+        <span class="upload-group-icon">${icon}</span>
+        <div class="upload-group-info">
+          <div class="upload-group-label">${escapeHtml(g.rootLabel)}</div>
+          <div class="upload-group-meta">${statusText}${countText}</div>
+          <div class="upload-group-progress">
+            <div class="upload-group-bar ${barClass}" style="width:${agg.pct}%"></div>
+          </div>
+        </div>
+        <span class="upload-group-speed">${speedText}</span>
+        <button class="upload-group-action ${actionClass}" onclick="event.stopPropagation();${actionFn}">${actionLabel}</button>
+      `;
+      // 插入到正确位置（保持降序）
+      const sortedRows = [...container.querySelectorAll('.upload-group-row')];
+      let inserted = false;
+      for (const row of sortedRows) {
+        const rowGid = row.dataset.gid;
+        const rowGroup = UploadStore.groups.get(rowGid);
+        if (rowGroup && rowGroup.createdAt < g.createdAt) {
+          container.insertBefore(div, row);
+          inserted = true;
+          break;
+        }
       }
-    }
-  });
-
-  // Remove global entries no longer present in server data
-  for (const id of globalUploads.keys()) {
-    const entry = globalUploads.get(id);
-    const isLocalRunning = activeXhrs.has(id) || uploadQueue.some(task => task.id === id);
-    const isTerminal = entry && (entry.status === 'done' || entry.status === 'error' || entry.status === 'canceled');
-
-    if (!serverIds.has(id) && !isLocalRunning && !isTerminal) {
-      globalUploads.delete(id);
-      hiddenGlobalIds.delete(id);
-      const el = document.getElementById('upload-' + id);
-      if (el) el.remove();
-      hasChanges = true;
+      if (!inserted) container.appendChild(div);
     }
   }
-  // Also clean up hiddenGlobalIds for IDs the server has stopped sending
-  for (const id of hiddenGlobalIds) {
-    if (!serverIds.has(id)) hiddenGlobalIds.delete(id);
-  }
-
-  if (hasChanges) renderUploadPanel();
 }
+
 
 /* ===== Drag & Drop ===== */
 function setupDragDrop() {
@@ -2075,6 +2364,7 @@ document.addEventListener('keydown', (e) => {
     closeNewFolderModal();
     closeUploadModal();
     closeSidebar();
+    if (panelOpen) { panelOpen = false; renderUploadFab(); }
   }
 });
 
@@ -2118,6 +2408,32 @@ function init() {
   setupUploadModalDrop();
   setupActionButtons();
   connectSSE();
+
+  // 订阅 UploadStore 变化，驱动 FAB + 面板渲染
+  UploadStore.subscribe(() => {
+    renderUploadFab();
+  });
+
+  // beforeunload：取消所有进行中的上传并清理服务端文件
+  window.addEventListener('beforeunload', (e) => {
+    let hasActive = false;
+    for (const [gid, g] of UploadStore.groups) {
+      const agg = UploadStore.computeGroupAggregate(gid);
+      if (agg && (agg.uploading > 0 || agg.queued > 0)) {
+        hasActive = true;
+        // 使用 sendBeacon 异步通知服务端清理（不阻塞页面卸载）
+        navigator.sendBeacon && navigator.sendBeacon(
+          '/api/files/upload/cancel-group',
+          JSON.stringify({ groupId: gid, removeFiles: true })
+        );
+      }
+    }
+    if (hasActive) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+
 }
 
 document.addEventListener('DOMContentLoaded', init);
