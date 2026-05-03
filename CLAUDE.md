@@ -18,42 +18,45 @@ No build step, no test framework, no linter configured.
 ## Architecture
 
 **Single-file backend + single-file frontend:**
-- `server.js` (~1137 lines) — All Express routes, middleware, helpers, and startup logic
-- `public/index.html` (~2442 lines) — Complete SPA with embedded CSS and JS (no framework)
+- `server.js` (1137 lines) — All Express routes, middleware, helpers, and startup logic
+- `public/index.html` (2442 lines) — Complete SPA with embedded CSS and JS (no framework)
 
 **Data flow:**
-- Files are stored in `files/` (gitignored, auto-created)
+- Files stored in `files/` (gitignored, auto-created)
 - Uploads go to `.tmp/` first, then moved to final location
 - Upload progress tracked via in-memory Maps with SSE push to clients
-- Static sites: if a subdirectory under `files/` contains `index.html`, Express serves it as a site
+- Upload groups: batch tracking with group-level cancel support
+- Static sites: subdirectory under `files/` with `index.html` served as a site
 
 **Key server sections:**
 - Constants/config at top (port, paths, size limits, text file extensions)
-- Upload progress Maps and cleanup logic
-- Helper functions: `validatePath` (path traversal guard), `sanitizeFilename`, `decodeFilename` (UTF-8/Latin-1/GBK via iconv-lite), `isTextFileExtension`, `isBinaryContent`
+- Upload progress Maps (`uploadProgress`, `canceledUploads`, `activeUploadRequests`, `uploadGroups`) and cleanup logic
+- Helper functions: `validatePath` (path traversal guard), `sanitizeFilename`, `decodeFilename` (UTF-8/Latin-1/GBK via iconv-lite), `isTextFileExtension`, `isBinaryContent`, `generateUploadId`, `pruneProgressEntries`, `isPrivateIPv4`, `getLocalIPv4`
 - Express middleware (CORS, body parser 50MB, trust proxy)
-- Route handlers: file CRUD, upload with multer (10GB limit, 50 files), SSE progress, upload cancellation
+- Route handlers: file CRUD, upload with multer (10GB limit, 50 files), SSE progress, upload/group cancellation
 - Static site detection and serving
 
 **Frontend patterns:**
 - Vanilla JS with global state variables (current path, file list, upload queue)
 - XMLHttpRequest for uploads (not fetch — needed for progress events)
 - EventSource for SSE upload progress
-- Upload queue with concurrency limit (5 simultaneous)
+- Upload queue with concurrency limit (5 simultaneous), FAB button + history panel
 - CSS custom properties for theming
 
 ## API Endpoints
 
 | Method | Path | Purpose |
 |--------|------|---------|
+| GET | `/` | Serve SPA frontend |
 | GET | `/api/files` | List directory contents |
 | POST | `/api/files/upload` | Upload files (multipart, multer) |
+| POST | `/api/files/upload/cancel` | Cancel a single in-progress upload |
+| POST | `/api/files/upload/cancel-group` | Cancel all uploads in a group |
+| GET | `/api/files/upload-progress` | SSE stream for upload progress |
 | GET | `/api/files/download` | Download file |
 | GET | `/api/files/view` | View text file (5MB limit, extension whitelist) |
 | DELETE | `/api/files` | Delete file or folder |
 | POST | `/api/files/mkdir` | Create directory |
-| GET | `/api/files/upload-progress` | SSE stream for upload progress |
-| POST | `/api/files/upload-cancel` | Cancel in-progress upload |
 
 ## Conventions
 
@@ -75,12 +78,14 @@ No build step, no test framework, no linter configured.
 
 ## Configuration
 
-All config is in `server.js` constants at the top of the file:
+All config is in `server.js` constants at the top:
 - `PORT` — 4000
 - `FILES_ROOT` — `./files`
-- `TMP_DIR` — `./tmp`
+- `UPLOAD_TEMP_DIR` — `./.tmp`
 - `MAX_VIEW_FILE_SIZE` — 5MB
-- `TEXT_EXTENSIONS` — whitelist for file preview
+- `TEXT_FILE_EXTENSIONS` — whitelist for file preview
+- `MAX_PROGRESS_ENTRIES` — 50
+- `SSE_POLL_INTERVAL` — 500ms
 
 ## AI Working Guidelines
 
@@ -140,23 +145,24 @@ All config is in `server.js` constants at the top of the file:
 **Standard docs root:** `/docs`
 
 **Standard categories (all created):**
-- `/docs/plan` — plans, proposals, roadmaps, todos
-- `/docs/product` — product requirements, PRDs, user stories, acceptance criteria, feature scopes
-- `/docs/design` — designs, architecture, ADRs, specs
-- `/docs/guide` — onboarding, usage, operations, runbooks
-- `/docs/modules` — module documentation, directory boundaries, component overviews
-- `/docs/references` — reference materials, terminology, indexes
-- `/docs/checklist` — checklists, audit lists, initialization lists
-- `/docs/reports` — tests, audits, performance, postmortem reports
+| Category | Directory | Purpose |
+|----------|-----------|---------|
+| plan | `/docs/plan` | Plans, proposals, roadmaps, todos |
+| product | `/docs/product` | PRDs, user stories, acceptance criteria |
+| design | `/docs/design` | Architecture, ADRs, specs |
+| guide | `/docs/guide` | Onboarding, usage, runbooks |
+| modules | `/docs/modules` | Module docs, directory boundaries |
+| references | `/docs/references` | Reference materials, terminology, indexes |
+| checklist | `/docs/checklist` | Checklists, audit lists |
+| reports | `/docs/reports` | Test reports, audits, postmortems |
 
 **New document rules:**
 - Default new documents to `/docs` under appropriate category
-- Before creating new docs, check `/docs` for existing semantically-equivalent categories (e.g., if `/docs/guides` exists, don't create `/docs/guide`)
+- Before creating new docs, check `/docs` for existing semantically-equivalent categories
 - Reuse existing semantically-equivalent directories; don't create duplicate directories with singular/plural variations
 - Only create new doc category directories when semantic is clear and no equivalent exists
 - Avoid adding scattered `.md` files to repository root
-
-**Current docs status:** All standard categories created. Existing file `/docs/REFACTOR_UPLOAD.md` should be moved to appropriate category based on content (likely `/docs/design` or `/docs/reports`).
+- Existing uncategorized file `/docs/REFACTOR_UPLOAD.md` should be moved to `/docs/design` or `/docs/reports`
 
 ### Stack-Specific Consistency
 
