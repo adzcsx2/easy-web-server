@@ -7,6 +7,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
 const iconv = require('iconv-lite');
+const { spawn } = require('child_process');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1043,6 +1044,32 @@ app.post('/api/files/mkdir', (req, res) => {
     console.error('Error in POST /api/files/mkdir:', err);
     res.status(500).json({ error: 'Failed to create folder' });
   }
+});
+
+// --- POST /api/clipboard ---------------------------------------------------
+app.post('/api/clipboard', express.json({ limit: '100kb' }), (req, res) => {
+  const text = req.body.text;
+  if (typeof text !== 'string' || text.length === 0) {
+    return res.status(400).json({ error: '请输入文字' });
+  }
+  if (text.length > 100_000) {
+    return res.status(400).json({ error: '文字过长' });
+  }
+
+  // Windows: 使用 clip 命令，通过 stdin 管道传递（避免命令注入）
+  const proc = spawn('clip', [], { shell: true });
+  proc.stdin.write(text, 'utf8');
+  proc.stdin.end();
+  proc.on('close', (code) => {
+    if (code === 0) {
+      res.json({ success: true });
+    } else {
+      res.status(500).json({ error: '服务器剪贴板写入失败' });
+    }
+  });
+  proc.on('error', () => {
+    res.status(500).json({ error: '服务器剪贴板写入失败' });
+  });
 });
 
 // ---------------------------------------------------------------------------
