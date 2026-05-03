@@ -53,21 +53,36 @@ Plan before executing when:
 - **After changes:** Test the specific functionality that was modified
 - **Server restart:** Required after server.js changes (npm start)
 - **Documentation-only changes:** Verify links, paths, and consistency
+- **Verification failure:** Fix only current changes, not unrelated historical issues
 
 ## Key Entry Points
 
-- **Server:** server.js (lines 1-1137) — all Express routes, middleware, helpers
-- **Frontend:** public/index.html (lines 1-2442) — complete SPA with embedded CSS/JS
+- **Server:** server.js (1137 lines) — all Express routes, middleware, helpers
+- **Frontend:** public/index.html (2442 lines) — complete SPA with embedded CSS/JS
 - **File storage:** files/ directory (gitignored)
 - **Upload temp:** .tmp/ directory (gitignored)
 
 ## Common Patterns
 
 - **Path validation:** All file operations must use validatePath() for security
-- **Upload tracking:** In-memory Maps (uploadProgress, canceledUploads, uploadGroups)
+- **Upload tracking:** In-memory Maps (uploadProgress, canceledUploads, activeUploadRequests, uploadGroups)
 - **Encoding:** iconv-lite for Chinese filename conversion (UTF-8/Latin-1/GBK)
 - **Progress streaming:** Server-Sent Events (SSE) via EventSource on client
-- **Upload queue:** Concurrency limit of 5 simultaneous uploads
+- **Upload queue:** Concurrency limit of 5 simultaneous uploads with group support
+
+## API Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/files` | List directory |
+| POST | `/api/files/upload` | Upload files |
+| POST | `/api/files/upload/cancel` | Cancel single upload |
+| POST | `/api/files/upload/cancel-group` | Cancel upload group |
+| GET | `/api/files/upload-progress` | SSE progress stream |
+| GET | `/api/files/download` | Download file |
+| GET | `/api/files/view` | View text file |
+| DELETE | `/api/files` | Delete file/folder |
+| POST | `/api/files/mkdir` | Create directory |
 
 ## Documentation Structure
 
