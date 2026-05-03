@@ -376,6 +376,41 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 }
 .content.drop-active .drop-overlay-text { display: block; }
 
+/* ===== Clipboard FAB ===== */
+.clipboard-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #6c757d;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  z-index: 1000;
+  transition: transform 0.2s, box-shadow 0.2s, bottom 0.3s;
+}
+.clipboard-fab:hover { transform: scale(1.08); box-shadow: 0 6px 20px rgba(0,0,0,0.25); }
+.clipboard-fab.fab-shifted { bottom: 88px; }
+
+.clipboard-textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  font-size: 0.9rem;
+  background: var(--bg);
+  color: var(--fg);
+  box-sizing: border-box;
+}
+
 /* ===== Upload FAB + History Panel ===== */
 .upload-fab {
   position: fixed;
@@ -417,7 +452,7 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 
 .upload-history-panel {
   position: fixed;
-  bottom: 88px;
+  bottom: 148px;
   right: 28px;
   width: 420px;
   max-height: 60vh;
@@ -563,13 +598,20 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
     right: 0;
     left: 0;
     width: 100%;
-    bottom: 80px;
+    bottom: 136px;
     border-radius: var(--radius) var(--radius) 0 0;
     max-height: 70vh;
   }
   .upload-fab {
     right: 16px;
     bottom: 16px;
+  }
+  .clipboard-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+  .clipboard-fab.fab-shifted {
+    bottom: 76px;
   }
 }
 
@@ -1048,11 +1090,32 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   </div>
 </div>
 
+<!-- ===== Clipboard FAB ===== -->
+<button class="clipboard-fab" id="clipboardFab" aria-label="粘贴板" onclick="openClipboardModal()">
+  &#128203;
+</button>
+
 <!-- ===== Upload FAB ===== -->
 <button class="upload-fab fab-hidden" id="uploadFab" aria-label="上传传输列表" onclick="toggleUploadPanel()">
   &#8679;
   <span class="fab-badge" id="fabBadge" style="display:none;">0</span>
 </button>
+
+<!-- ===== Clipboard Modal ===== -->
+<div class="modal-overlay" id="clipboardModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">粘贴板</div>
+    </div>
+    <div class="modal-body">
+      <textarea id="clipboardInput" class="clipboard-textarea" rows="6" placeholder="输入要复制到剪贴板的文字&#10;(Ctrl+Enter 确定)"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeClipboardModal()">取消</button>
+      <button class="btn btn-primary" onclick="confirmClipboard()">确定</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== Upload History Panel ===== -->
 <div class="upload-history-panel panel-hidden" id="uploadHistoryPanel" role="dialog" aria-label="传输历史">
@@ -2062,9 +2125,11 @@ function renderUploadFab() {
     fab.classList.add('fab-hidden');
     panel.classList.add('panel-hidden');
     panelOpen = false;
+    updateClipboardFabPosition();
     return;
   }
   fab.classList.remove('fab-hidden');
+  updateClipboardFabPosition();
 
   if (activeCount > 0) {
     badge.textContent = activeCount;
@@ -2346,6 +2411,58 @@ function closeSidebar() {
   document.getElementById('sidebarOverlay').classList.remove('active');
 }
 
+/* ===== Clipboard FAB ===== */
+function openClipboardModal() {
+  const modal = document.getElementById('clipboardModal');
+  const input = document.getElementById('clipboardInput');
+  input.value = '';
+  modal.classList.add('active');
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeClipboardModal() {
+  document.getElementById('clipboardModal').classList.remove('active');
+}
+
+async function confirmClipboard() {
+  const text = document.getElementById('clipboardInput').value.trim();
+  if (!text) {
+    showToast('请输入文字', 'error');
+    return;
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      // Fallback for HTTP (non-HTTPS) environments
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('aria-hidden', 'true');
+      ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if (!ok) throw new Error('复制操作未被浏览器允许');
+    }
+    showToast('已复制到剪贴板', 'success');
+    closeClipboardModal();
+  } catch (err) {
+    showToast('复制失败: ' + err.message, 'error');
+  }
+}
+
+function updateClipboardFabPosition() {
+  const uploadFab = document.getElementById('uploadFab');
+  const clipboardFab = document.getElementById('clipboardFab');
+  if (!uploadFab || !clipboardFab) return;
+  if (uploadFab.classList.contains('fab-hidden')) {
+    clipboardFab.classList.remove('fab-shifted');
+  } else {
+    clipboardFab.classList.add('fab-shifted');
+  }
+}
+
 /* ===== Modal backdrop close ===== */
 document.getElementById('deleteModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeDeleteModal();
@@ -2356,6 +2473,15 @@ document.getElementById('newFolderModal').addEventListener('click', (e) => {
 document.getElementById('uploadModal').addEventListener('click', (e) => {
   if (e.target === e.currentTarget) closeUploadModal();
 });
+document.getElementById('clipboardModal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeClipboardModal();
+});
+document.getElementById('clipboardInput').addEventListener('keydown', (e) => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    e.preventDefault();
+    confirmClipboard();
+  }
+});
 
 /* ===== Keyboard shortcuts ===== */
 document.addEventListener('keydown', (e) => {
@@ -2363,6 +2489,7 @@ document.addEventListener('keydown', (e) => {
     closeDeleteModal();
     closeNewFolderModal();
     closeUploadModal();
+    closeClipboardModal();
     closeSidebar();
     if (panelOpen) { panelOpen = false; renderUploadFab(); }
   }
