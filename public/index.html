@@ -1108,7 +1108,7 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
       <div class="modal-title">粘贴板</div>
     </div>
     <div class="modal-body">
-      <textarea id="clipboardInput" class="clipboard-textarea" rows="6" placeholder="输入要复制到剪贴板的文字&#10;(Ctrl+Enter 确定)"></textarea>
+      <textarea id="clipboardInput" class="clipboard-textarea" rows="6" placeholder="输入要复制到服务器剪贴板的文字&#10;(Ctrl+Enter 确定)"></textarea>
     </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeClipboardModal()">取消</button>
@@ -2431,21 +2431,14 @@ async function confirmClipboard() {
     return;
   }
   try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      await navigator.clipboard.writeText(text);
-    } else {
-      // Fallback for HTTP (non-HTTPS) environments
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.setAttribute('aria-hidden', 'true');
-      ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand('copy');
-      document.body.removeChild(ta);
-      if (!ok) throw new Error('复制操作未被浏览器允许');
-    }
-    showToast('已复制到剪贴板', 'success');
+    const res = await fetch('/api/clipboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '操作失败');
+    showToast('已复制到服务器剪贴板', 'success');
     closeClipboardModal();
   } catch (err) {
     showToast('复制失败: ' + err.message, 'error');
