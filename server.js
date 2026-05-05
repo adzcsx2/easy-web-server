@@ -1263,10 +1263,11 @@ const TUNNEL_RETRY_DELAY = 10_000; // 10 秒
 
 function startNamedTunnel() {
   const cmd = process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared';
+  const configPath = path.join(os.homedir(), '.cloudflared', 'config-web.yml');
   console.log(`  Tunnel:  ${TUNNEL_URL}`);
 
   cloudflaredProc = spawn(cmd, [
-    'tunnel', 'run', 'web'
+    'tunnel', '--config', configPath, 'run'
   ], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
 
   cloudflaredProc.on('error', (err) => {
