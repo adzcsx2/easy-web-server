@@ -56,7 +56,7 @@
   </div>
   <script>
     // TUNNEL_URL 占位符，由 server.js 自动替换
-    const TUNNEL_URL = 'https://scholars-carl-specific-breaking.trycloudflare.com';
+    const TUNNEL_URL = 'https://productivity-arising-alabama-scsi.trycloudflare.com';
 
     const status = document.getElementById('status');
     const spinner = document.getElementById('spinner');
@@ -64,12 +64,15 @@
     const manualLink = document.getElementById('manualLink');
     const tunnelLink = document.getElementById('tunnelLink');
 
-    if (TUNNEL_URL && TUNNEL_URL !== 'https://surgeon-objectives-smith-tim.trycloudflare.com' && TUNNEL_URL.startsWith('https://')) {
-      // URL 有效，立即跳转
-      window.location.href = TUNNEL_URL;
+    if (TUNNEL_URL && TUNNEL_URL.includes('.trycloudflare.com')) {
+      // 读取 hash 后缀（如 #/123/index.html），拼接到 tunnel URL
+      const suffix = location.hash; // 带 # 号，如 "#/123" 或空串
+      const target = TUNNEL_URL + suffix;
+
+      window.location.href = target;
       // 显示备用链接以防跳转被阻止
-      tunnelLink.href = TUNNEL_URL;
-      tunnelLink.textContent = TUNNEL_URL;
+      tunnelLink.href = target;
+      tunnelLink.textContent = target;
       manualLink.style.display = 'block';
       status.textContent = '正在跳转，如未自动跳转请点击下方链接...';
     } else {
