@@ -1157,6 +1157,7 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
       <textarea id="clipboardInput" class="clipboard-textarea" rows="6" placeholder="输入要复制到服务器剪贴板的文字&#10;(Ctrl+Enter 确定)"></textarea>
     </div>
     <div class="modal-footer">
+      <button class="btn btn-outline" onclick="fetchServerClipboard()">获取服务器剪贴板</button>
       <button class="btn btn-outline" onclick="closeClipboardModal()">取消</button>
       <button class="btn btn-primary" onclick="confirmClipboard()">确定</button>
     </div>
@@ -1648,11 +1649,14 @@ async function loadFiles() {
     }
 
     let actionsHtml = '';
-    if (f.isDir && f.hasIndexHtml) {
-      const sitePath = '/' + (currentPath ? currentPath + '/' : '') + encodeURIComponent(f.name) + '/';
-      actionsHtml += `<button class="btn-icon btn-icon-site" title="打开网站" data-action="site" data-site-path="${escapeHtml(sitePath)}">&#9741;</button>`;
-    }
-    if (!f.isDir) {
+    if (f.isDir) {
+      if (f.hasIndexHtml) {
+        const sitePath = '/' + (currentPath ? currentPath + '/' : '') + encodeURIComponent(f.name) + '/';
+        actionsHtml += `<button class="btn-icon btn-icon-site" title="打开网站" data-action="site" data-site-path="${escapeHtml(sitePath)}">&#9741;</button>`;
+      }
+      const folderPath = (currentPath ? currentPath + '/' : '') + f.name;
+      actionsHtml += `<button class="btn-icon" title="下载文件夹" data-action="download-folder" data-folder-path="${escapeHtml(folderPath)}">&#8595;</button>`;
+    } else {
       const filePath = (currentPath ? currentPath + '/' : '') + f.name;
       actionsHtml += `<button class="btn-icon" title="下载" data-action="download" data-file-path="${escapeHtml(filePath)}">&#8595;</button>`;
     }
@@ -1720,6 +1724,16 @@ function renderFolderTree(topLevelFolders) {
 function downloadFile(filePath) {
   const a = document.createElement('a');
   a.href = '/api/files/download?path=' + encodeURIComponent(filePath);
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* ===== Download Folder ===== */
+function downloadFolder(folderPath) {
+  const a = document.createElement('a');
+  a.href = '/api/files/download-folder?path=' + encodeURIComponent(folderPath);
   a.download = '';
   document.body.appendChild(a);
   a.click();
@@ -2499,6 +2513,33 @@ async function confirmClipboard() {
   }
 }
 
+async function fetchServerClipboard() {
+  try {
+    const res = await fetch('/api/clipboard');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '操作失败');
+    if (!data.text) {
+      showToast('服务器剪贴板为空', 'error');
+      return;
+    }
+    // 填入 textarea 方便查看
+    document.getElementById('clipboardInput').value = data.text;
+    // 尝试复制到本地剪贴板
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(data.text);
+        showToast('已复制到本地剪贴板', 'success');
+      } catch {
+        showToast('已获取内容，请手动复制', 'success');
+      }
+    } else {
+      showToast('已获取内容，请手动复制', 'success');
+    }
+  } catch (err) {
+    showToast('获取失败: ' + err.message, 'error');
+  }
+}
+
 function updateClipboardFabPosition() {
   const uploadFab = document.getElementById('uploadFab');
   const clipboardFab = document.getElementById('clipboardFab');
@@ -2553,6 +2594,8 @@ function setupActionButtons() {
         window.open(btn.dataset.sitePath, '_blank');
       } else if (action === 'download') {
         downloadFile(btn.dataset.filePath);
+      } else if (action === 'download-folder') {
+        downloadFolder(btn.dataset.folderPath);
       } else if (action === 'delete') {
         showDeleteModal(btn.dataset.deletePath, btn.dataset.deleteName);
       }

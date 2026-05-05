@@ -7,6 +7,7 @@ const fs = require('fs');
 const crypto = require('crypto');
 const os = require('os');
 const iconv = require('iconv-lite');
+const archiver = require('archiver');
 const { spawn, execFile } = require('child_process');
 
 // ---------------------------------------------------------------------------
@@ -918,6 +919,66 @@ app.get('/api/files/download', (req, res) => {
   }
 });
 
+// --- GET /api/files/download-folder -----------------------------------------
+app.get('/api/files/download-folder', (req, res) => {
+  try {
+    const relativePath = req.query.path || '';
+    if (!relativePath) {
+      return res.status(400).json({ error: 'Path parameter is required' });
+    }
+
+    const resolved = validatePath(relativePath, FILES_ROOT);
+
+    if (!fs.existsSync(resolved)) {
+      return res.status(404).json({ error: '文件夹不存在' });
+    }
+
+    const stat = fs.statSync(resolved);
+    if (!stat.isDirectory()) {
+      return res.status(400).json({ error: '路径不是文件夹' });
+    }
+
+    // 禁止下载根目录
+    if (resolved === FILES_ROOT) {
+      return res.status(403).json({ error: '不能下载根文件目录' });
+    }
+
+    const folderName = path.basename(resolved);
+    const zipFileName = sanitizeFilename(folderName) + '.zip';
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(zipFileName)}"; filename*=UTF-8''${encodeURIComponent(zipFileName)}`);
+
+    const archive = archiver('zip', {
+      zlib: { level: 1 }, // 快速压缩，局域网优先速度
+    });
+
+    archive.on('error', (err) => {
+      console.error('Archive error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: '压缩文件夹失败' });
+      } else {
+        res.end();
+      }
+    });
+
+    // 客户端断开时中止压缩
+    req.on('close', () => {
+      archive.abort();
+    });
+
+    archive.pipe(res);
+    archive.directory(resolved, folderName);
+    archive.finalize();
+  } catch (err) {
+    if (err.status === 403) return res.status(403).json({ error: err.message });
+    console.error('Error in GET /api/files/download-folder:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: '文件夹下载失败' });
+    }
+  }
+});
+
 // --- GET /api/files/view ---------------------------------------------------
 app.get('/api/files/view', (req, res) => {
   try {
@@ -1059,6 +1120,26 @@ let tunnelState = 'starting'; // 'starting' | 'ready' | 'failed'
 
 app.get('/api/tunnel', (_req, res) => {
   res.json({ url: tunnelUrl, redirectUrl: REDIRECT_PUBLIC_URL, status: tunnelState, retryCount: tunnelRetryCount });
+});
+
+// --- GET /api/clipboard ----------------------------------------------------
+app.get('/api/clipboard', (_req, res) => {
+  // Windows: 使用 PowerShell 读取剪贴板文本内容
+  const proc = spawn('powershell', ['-command', 'Get-Clipboard'], { shell: true });
+  let output = '';
+  proc.stdout.on('data', (chunk) => { output += chunk.toString('utf8'); });
+  proc.stderr.on('data', () => {}); // 忽略 stderr
+  proc.on('close', (code) => {
+    if (code === 0) {
+      const text = output.trimEnd(); // 去除末尾换行
+      res.json({ text });
+    } else {
+      res.status(500).json({ error: '读取服务器剪贴板失败' });
+    }
+  });
+  proc.on('error', () => {
+    res.status(500).json({ error: '读取服务器剪贴板失败' });
+  });
 });
 
 // --- POST /api/clipboard ---------------------------------------------------
