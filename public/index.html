@@ -941,34 +941,32 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
   padding: 6px 16px;
   font-size: 0.75rem;
   color: var(--muted);
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
   box-shadow: 0 -1px 4px rgba(0,0,0,0.05);
 }
-.tunnel-bar.visible { display: flex; }
 .tunnel-bar a {
   color: var(--primary);
   font-weight: 500;
   word-break: break-all;
 }
-.tunnel-bar .deploying {
-  color: var(--muted);
-  font-style: italic;
+.tunnel-bar .tunnel-status {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tunnel-bar .tunnel-status.status-ready {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.tunnel-bar .tunnel-status.status-connecting {
+  background: var(--warning-soft);
+  color: var(--warning);
   animation: pulse 1.5s ease-in-out infinite;
-}
-.tunnel-bar .deployed {
-  color: #2e7d32;
-  font-weight: 500;
-  cursor: pointer;
-}
-.tunnel-bar .deployed:hover {
-  text-decoration: underline;
-}
-.tunnel-bar .deploy-failed {
-  color: #c62828;
-  font-weight: 500;
 }
 @keyframes pulse {
   0%, 100% { opacity: 1; }
@@ -1186,8 +1184,8 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 <!-- ===== Tunnel Bar ===== -->
 <div class="tunnel-bar" id="tunnelBar">
   <span>&#127760; 公网访问:</span>
-  <a id="redirectUrl" href="#" target="_blank"></a>
-  <span id="tunnelStatus" class="deploying">正在部署中...</span>
+  <a id="tunnelLink" href="https://web.long123456789.xyz" target="_blank">https://web.long123456789.xyz</a>
+  <span class="tunnel-status status-connecting" id="tunnelStatus">连接中</span>
 </div>
 
 <script>
@@ -2617,58 +2615,35 @@ function setupActionButtons() {
 }
 
 /* ===== Tunnel URL ===== */
+const TUNNEL_URL = 'https://web.long123456789.xyz';
 let tunnelPollTimer = null;
-let tunnelRedirectUrl = null;
 
-// 更新底部 bar 的链接（带当前路径 + 时间戳破缓存）
+// 更新底部 bar 的链接（带当前路径）
 function updateTunnelLink() {
-  const el = document.getElementById('redirectUrl');
-  if (!el || !tunnelRedirectUrl) return;
+  const el = document.getElementById('tunnelLink');
+  if (!el) return;
   const suffix = currentPath ? '#/' + currentPath : '';
-  const base = tunnelRedirectUrl + '?t=' + Date.now();
-  el.href = base + suffix;
-  el.textContent = tunnelRedirectUrl + suffix;
+  el.href = TUNNEL_URL + suffix;
+  el.textContent = TUNNEL_URL + suffix;
 }
 
-function fetchTunnelUrl() {
+function fetchTunnelStatus() {
   fetch('/api/tunnel')
     .then(r => r.json())
     .then(data => {
       if (!data) return;
-      const bar = document.getElementById('tunnelBar');
-      const redirectEl = document.getElementById('redirectUrl');
       const statusEl = document.getElementById('tunnelStatus');
-      if (!bar) return;
+      if (!statusEl) return;
 
-      bar.classList.add('visible');
-
-      if (!data.redirectUrl) return;
-      tunnelRedirectUrl = data.redirectUrl;
-
-      // 更新 GitHub Pages 地址
-      updateTunnelLink();
-
-      // 更新部署状态
-      if (statusEl) {
-        if (data.status === 'ready' && data.url) {
-          statusEl.textContent = '已部署';
-          statusEl.className = 'deployed';
-          statusEl.onclick = () => window.open(data.url, '_blank');
-          if (tunnelPollTimer) { clearInterval(tunnelPollTimer); tunnelPollTimer = null; }
-        } else if (data.status === 'failed') {
-          statusEl.textContent = '部署失败';
-          statusEl.className = 'deploy-failed';
-          statusEl.onclick = null;
-          if (tunnelPollTimer) { clearInterval(tunnelPollTimer); tunnelPollTimer = null; }
-        } else {
-          const retryText = data.retryCount > 0 ? `(第 ${data.retryCount} 次)` : '';
-          statusEl.textContent = `正在部署中...${retryText}`;
-          statusEl.className = 'deploying';
-          statusEl.onclick = null;
-          if (!tunnelPollTimer) {
-            tunnelPollTimer = setInterval(fetchTunnelUrl, 5000);
-          }
-        }
+      if (data.status === 'ready') {
+        statusEl.textContent = '已连接';
+        statusEl.className = 'tunnel-status status-ready';
+        if (tunnelPollTimer) { clearInterval(tunnelPollTimer); tunnelPollTimer = null; }
+        // 切为低频轮询（30s），监控断线
+        tunnelPollTimer = setInterval(fetchTunnelStatus, 30_000);
+      } else {
+        statusEl.textContent = '连接中';
+        statusEl.className = 'tunnel-status status-connecting';
       }
     })
     .catch(() => {});
@@ -2684,8 +2659,12 @@ function init() {
   setupActionButtons();
   connectSSE();
 
-  // 获取 tunnel 地址
-  fetchTunnelUrl();
+  // 更新 tunnel 链接 + 状态轮询
+  updateTunnelLink();
+  fetchTunnelStatus();
+  if (!tunnelPollTimer) {
+    tunnelPollTimer = setInterval(fetchTunnelStatus, 3000);
+  }
 
   // 订阅 UploadStore 变化，驱动 FAB + 面板渲染
   UploadStore.subscribe(() => {

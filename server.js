@@ -8,7 +8,7 @@ const crypto = require('crypto');
 const os = require('os');
 const iconv = require('iconv-lite');
 const archiver = require('archiver');
-const { spawn, execFile } = require('child_process');
+const { spawn } = require('child_process');
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -1107,19 +1107,12 @@ app.post('/api/files/mkdir', (req, res) => {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Tunnel URL 同步相关常量
-// ---------------------------------------------------------------------------
-const REDIRECT_HTML_PATH = path.join(__dirname, 'docs', 'redirect.html');
-const REDIRECT_PLACEHOLDER = '__TUNNEL_URL_PLACEHOLDER__';
-const REDIRECT_PUBLIC_URL = 'https://adzcsx2.github.io/easy-web-server/redirect.html';
-
 // --- GET /api/tunnel -------------------------------------------------------
-let tunnelUrl = null;
-let tunnelState = 'starting'; // 'starting' | 'ready' | 'failed'
+const TUNNEL_URL = 'https://web.long123456789.xyz';
 
 app.get('/api/tunnel', (_req, res) => {
-  res.json({ url: tunnelUrl, redirectUrl: REDIRECT_PUBLIC_URL, status: tunnelState, retryCount: tunnelRetryCount });
+  const ready = cloudflaredProc && !cloudflaredProc.killed && cloudflaredProc.exitCode === null;
+  res.json({ url: TUNNEL_URL, status: ready ? 'ready' : 'connecting' });
 });
 
 // --- GET /api/clipboard ----------------------------------------------------
@@ -1258,237 +1251,43 @@ server.keepAliveTimeout = 0;  // HTTP keep-alive timeout
 server.headersTimeout = 60_000; // header timeout – prevents Slowloris DoS
 
 // ---------------------------------------------------------------------------
-// Cloudflare Quick Tunnel
+// Cloudflare Named Tunnel
 // ---------------------------------------------------------------------------
-const CLOUDFLARED_EXE = process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared';
-const CLOUDFLARED_PATH = path.join(PROJECT_ROOT, CLOUDFLARED_EXE);
 let cloudflaredProc = null;
 
 /**
- * 检测 cloudflared 是否可用（PATH 或项目目录下）
+ * 启动 Named Tunnel（使用系统 PATH 中的 cloudflared）
+ * 进程崩溃后自动重启
  */
-function findCloudflared() {
-  // 项目目录下优先
-  if (fs.existsSync(CLOUDFLARED_PATH)) return CLOUDFLARED_PATH;
-  // 系统 PATH
-  try {
-    const whichCmd = process.platform === 'win32' ? 'where' : 'which';
-    const result = require('child_process').execSync(`${whichCmd} ${CLOUDFLARED_EXE}`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
-    const p = result.trim().split(/\r?\n/)[0];
-    if (p && fs.existsSync(p)) return p;
-  } catch (_) {}
-  return null;
-}
-
-/**
- * Windows 平台自动下载 cloudflared 到项目目录
- */
-function installCloudflared() {
-  return new Promise((resolve, reject) => {
-    const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
-    const url = `https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-${arch}.exe`;
-    console.log(`  正在下载 cloudflared (${arch}) ...`);
-
-    const ps = spawn('powershell.exe', [
-      '-NoProfile', '-Command',
-      `[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '${url}' -OutFile '${CLOUDFLARED_PATH}'`
-    ], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-
-    let stderr = '';
-    ps.stderr.on('data', (d) => { stderr += d; });
-
-    ps.on('close', (code) => {
-      if (code === 0 && fs.existsSync(CLOUDFLARED_PATH)) {
-        console.log('  cloudflared 下载完成');
-        resolve(CLOUDFLARED_PATH);
-      } else {
-        reject(new Error(`下载 cloudflared 失败 (code=${code}): ${stderr}`));
-      }
-    });
-    ps.on('error', reject);
-  });
-}
-
-/**
- * 启动 Quick Tunnel 并解析公网 URL
- */
-function startTunnel(cloudflaredBin) {
-  return new Promise((resolve, reject) => {
-    // tunnel 子域名是长随机串（如 xxx-yyy-zzz-aaa-bbb），至少 20 字符
-    // 排除 api.trycloudflare.com 等短子域名
-    const urlRegex = /https:\/\/[a-zA-Z0-9\-]{20,}\.trycloudflare\.com/;
-    let resolved = false;
-    let stderrBuf = '';
-
-    const proc = spawn(cloudflaredBin, [
-      'tunnel', '--url', `http://localhost:${PORT}`, '--no-autoupdate'
-    ], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-
-    cloudflaredProc = proc;
-
-    proc.stderr.on('data', (data) => {
-      const chunk = data.toString();
-      stderrBuf += chunk;
-      if (!resolved) {
-        const match = chunk.match(urlRegex);
-        if (match) {
-          resolved = true;
-          tunnelUrl = match[0];
-          tunnelState = 'ready';
-          console.log(`  Tunnel:  ${tunnelUrl}`);
-          console.log();
-          resolve(tunnelUrl);
-        }
-      }
-    });
-
-    proc.on('error', (err) => {
-      if (!resolved) {
-        reject(new Error(`启动 cloudflared 失败: ${err.message}`));
-      }
-    });
-
-    proc.on('close', (code) => {
-      cloudflaredProc = null;
-      if (!resolved) {
-        reject(new Error(`cloudflared 意外退出 (code=${code}): ${stderrBuf}`));
-      }
-    });
-
-    // 30 秒超时：如果没拿到 URL 就放弃
-    setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
-        proc.kill();
-        reject(new Error('等待 tunnel URL 超时 (30s)'));
-      }
-    }, 30_000);
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Tunnel URL 自动同步到 GitHub Pages（docs/redirect.html）
-// ---------------------------------------------------------------------------
-
-/**
- * 将 tunnel URL 写入 docs/redirect.html 并 git push 到远程
- */
-function syncTunnelUrlToGitHub(url) {
-  try {
-    if (!fs.existsSync(REDIRECT_HTML_PATH)) {
-      console.log('  [redirect] docs/redirect.html 不存在，跳过同步');
-      return;
-    }
-
-    let html = fs.readFileSync(REDIRECT_HTML_PATH, 'utf8');
-    // 精确替换 const TUNNEL_URL = '...' 这一整行
-    const newContent = html.replace(
-      /const TUNNEL_URL = '(https:\/\/[a-zA-Z0-9\-]{20,}\.trycloudflare\.com|__TUNNEL_URL_PLACEHOLDER__)'/,
-      `const TUNNEL_URL = '${url}'`
-    );
-
-    if (html === newContent) {
-      // URL 没变（理论上不会走到这里，因为每次重启 URL 都不同）
-      return;
-    }
-
-    fs.writeFileSync(REDIRECT_HTML_PATH, newContent, 'utf8');
-    console.log('  [redirect] 已写入 tunnel URL 到 docs/redirect.html');
-
-    // git add + commit + push
-    const gitOpts = { cwd: __dirname, windowsHide: true };
-    const gitCmd = process.platform === 'win32' ? 'git.exe' : 'git';
-
-    execFile(gitCmd, ['add', 'docs/redirect.html'], gitOpts, (addErr) => {
-      if (addErr) {
-        console.error('  [redirect] git add 失败:', addErr.message);
-        return;
-      }
-      execFile(gitCmd, ['commit', '-m', `chore: update tunnel URL`], gitOpts, (commitErr) => {
-        if (commitErr) {
-          // 可能没有变更（比如内容相同），静默忽略
-          return;
-        }
-        console.log('  [redirect] git commit 成功');
-        execFile(gitCmd, ['push', 'origin', 'main'], gitOpts, (pushErr) => {
-          if (pushErr) {
-            console.error('  [redirect] git push 失败:', pushErr.message);
-            return;
-          }
-          console.log('  [redirect] git push 成功 — redirect.html 已同步到 GitHub');
-        });
-      });
-    });
-  } catch (err) {
-    console.error('  [redirect] 同步失败:', err.message);
-  }
-}
-
-// 自动安装 + 启动隧道（异步，不阻塞 server 启动，失败自动重试）
 const TUNNEL_RETRY_DELAY = 10_000; // 10 秒
-let tunnelRetryCount = 0;
 
-(async () => {
-  try {
-    let bin = findCloudflared();
-    if (!bin) {
-      if (process.platform === 'win32') {
-        await installCloudflared();
-        bin = CLOUDFLARED_PATH;
-      } else {
-        console.log('  未找到 cloudflared，跳过隧道。安装方法: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/');
-        tunnelState = 'failed';
-        return;
-      }
-    }
+function startNamedTunnel() {
+  const cmd = process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared';
+  console.log(`  Tunnel:  ${TUNNEL_URL}`);
 
-    while (true) {
-      tunnelRetryCount++;
-      try {
-        console.log(`  启动隧道 (第 ${tunnelRetryCount} 次)...`);
-        const url = await startTunnel(bin);
-        tunnelRetryCount = 0;
-        syncTunnelUrlToGitHub(url);
-        return; // 成功，退出
-      } catch (err) {
-        console.error(`  第 ${tunnelRetryCount} 次尝试失败: ${err.message}`);
-        console.log(`  ${TUNNEL_RETRY_DELAY / 1000} 秒后重试...`);
-        await new Promise(r => setTimeout(r, TUNNEL_RETRY_DELAY));
-      }
+  cloudflaredProc = spawn(cmd, [
+    'tunnel', 'run', 'web'
+  ], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+
+  cloudflaredProc.on('error', (err) => {
+    console.error(`  [tunnel] 启动失败: ${err.message}`);
+    cloudflaredProc = null;
+  });
+
+  cloudflaredProc.on('close', (code) => {
+    cloudflaredProc = null;
+    if (code !== 0) {
+      console.error(`  [tunnel] 进程退出 (code=${code})，${TUNNEL_RETRY_DELAY / 1000} 秒后重启...`);
+      setTimeout(startNamedTunnel, TUNNEL_RETRY_DELAY);
     }
-  } catch (err) {
-    console.error(`  Tunnel 启动失败: ${err.message}`);
-    tunnelState = 'failed';
-  }
-})();
+  });
+}
+
+startNamedTunnel();
 
 // Graceful shutdown
 function gracefulShutdown(signal) {
   console.log(`\n收到 ${signal}，正在关闭...`);
-
-  // 重置 redirect.html 中的 tunnel URL 为占位符，并同步 push
-  if (tunnelUrl && fs.existsSync(REDIRECT_HTML_PATH)) {
-    try {
-      let html = fs.readFileSync(REDIRECT_HTML_PATH, 'utf8');
-      const reset = html.replace(
-        /const TUNNEL_URL = '(https:\/\/[a-zA-Z0-9\-]{20,}\.trycloudflare\.com|__TUNNEL_URL_PLACEHOLDER__)'/,
-        `const TUNNEL_URL = '${REDIRECT_PLACEHOLDER}'`
-      );
-      if (html !== reset) {
-        fs.writeFileSync(REDIRECT_HTML_PATH, reset, 'utf8');
-        console.log('  [redirect] 已重置 tunnel URL 占位符');
-        // 关闭阶段用同步操作确保 push 完成再退出
-        const syncOpts = { cwd: __dirname, windowsHide: true, timeout: 10_000, stdio: 'pipe' };
-        require('child_process').execSync('git add docs/redirect.html', syncOpts);
-        require('child_process').execSync('git commit -m "chore: reset tunnel URL (offline)"', syncOpts);
-        require('child_process').execSync('git push origin main', syncOpts);
-        console.log('  [redirect] 已同步离线状态到 GitHub');
-      }
-    } catch (e) {
-      console.error('  [redirect] 离线同步失败:', e.message);
-    }
-  }
-
   if (cloudflaredProc && !cloudflaredProc.killed) {
     cloudflaredProc.kill('SIGTERM');
   }
