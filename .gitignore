@@ -3,3 +3,5 @@ node_modules/
 .tmp/
 *.apk
 files/
+cloudflared.exe
+nul

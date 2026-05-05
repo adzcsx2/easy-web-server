@@ -32,6 +32,7 @@ No build step, no test framework, no linter configured.
 - Constants/config at top (port, paths, size limits, text file extensions)
 - Upload progress Maps (`uploadProgress`, `canceledUploads`, `activeUploadRequests`, `uploadGroups`) and cleanup logic
 - Helper functions: `validatePath` (path traversal guard), `sanitizeFilename`, `decodeFilename` (UTF-8/Latin-1/GBK via iconv-lite), `isTextFileExtension`, `isBinaryContent`, `generateUploadId`, `pruneProgressEntries`, `isPrivateIPv4`, `getLocalIPv4`
+- Cloudflare Quick Tunnel: auto-install cloudflared (Windows), spawn tunnel on startup, `GET /api/tunnel` endpoint, graceful shutdown
 - Express middleware (CORS, body parser 50MB, trust proxy)
 - Route handlers: file CRUD, upload with multer (10GB limit, 50 files), SSE progress, upload/group cancellation
 - Static site detection and serving
@@ -57,6 +58,8 @@ No build step, no test framework, no linter configured.
 | GET | `/api/files/view` | View text file (5MB limit, extension whitelist) |
 | DELETE | `/api/files` | Delete file or folder |
 | POST | `/api/files/mkdir` | Create directory |
+| POST | `/api/clipboard` | Write text to server clipboard |
+| GET | `/api/tunnel` | Get current Cloudflare Quick Tunnel URL (`{ url }` or `{ url: null }`) |
 
 ## Conventions
 
