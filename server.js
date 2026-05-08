@@ -1111,8 +1111,15 @@ app.post('/api/files/mkdir', (req, res) => {
 const TUNNEL_URL = 'https://web.long123456789.xyz';
 
 app.get('/api/tunnel', (_req, res) => {
-  const ready = cloudflaredProc && !cloudflaredProc.killed && cloudflaredProc.exitCode === null;
-  res.json({ url: TUNNEL_URL, status: ready ? 'ready' : 'connecting' });
+  // Tunnel 由全局脚本管理（tunnel-start），通过 HTTPS 检测可达性
+  const https = require('https');
+  const url = new URL(TUNNEL_URL);
+  const req2 = https.request({ hostname: url.hostname, port: 443, method: 'HEAD', timeout: 5000 }, () => {
+    res.json({ url: TUNNEL_URL, status: 'ready' });
+  });
+  req2.on('error', () => res.json({ url: TUNNEL_URL, status: 'connecting' }));
+  req2.on('timeout', () => { req2.destroy(); res.json({ url: TUNNEL_URL, status: 'connecting' }); });
+  req2.end();
 });
 
 // --- GET /api/clipboard ----------------------------------------------------
@@ -1251,51 +1258,15 @@ server.keepAliveTimeout = 0;  // HTTP keep-alive timeout
 server.headersTimeout = 60_000; // header timeout – prevents Slowloris DoS
 
 // ---------------------------------------------------------------------------
-// Cloudflare Named Tunnel
-// ---------------------------------------------------------------------------
-let cloudflaredProc = null;
-
-/**
- * 启动 Named Tunnel（使用系统 PATH 中的 cloudflared）
- * 进程崩溃后自动重启
- */
-const TUNNEL_RETRY_DELAY = 10_000; // 10 秒
-
-function startNamedTunnel() {
-  const cmd = process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared';
-  const configPath = path.join(os.homedir(), '.cloudflared', 'config-web.yml');
-  console.log(`  Tunnel:  ${TUNNEL_URL}`);
-
-  cloudflaredProc = spawn(cmd, [
-    'tunnel', '--config', configPath, 'run'
-  ], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
-
-  cloudflaredProc.on('error', (err) => {
-    console.error(`  [tunnel] 启动失败: ${err.message}`);
-    cloudflaredProc = null;
-  });
-
-  cloudflaredProc.on('close', (code) => {
-    cloudflaredProc = null;
-    if (code !== 0) {
-      console.error(`  [tunnel] 进程退出 (code=${code})，${TUNNEL_RETRY_DELAY / 1000} 秒后重启...`);
-      setTimeout(startNamedTunnel, TUNNEL_RETRY_DELAY);
-    }
-  });
-}
-
-startNamedTunnel();
-
 // Graceful shutdown
+// Tunnel 管理已移至全局脚本：tunnel-start / tunnel-stop / tunnel-healthcheck
+// ---------------------------------------------------------------------------
+
 function gracefulShutdown(signal) {
   console.log(`\n收到 ${signal}，正在关闭...`);
-  if (cloudflaredProc && !cloudflaredProc.killed) {
-    cloudflaredProc.kill('SIGTERM');
-  }
   server.close(() => {
     process.exit(0);
   });
-  // 5 秒强制退出
   setTimeout(() => process.exit(0), 5000);
 }
 

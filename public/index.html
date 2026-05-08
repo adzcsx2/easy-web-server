@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Web 文件管理</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='32' y2='32' gradientUnits='userSpaceOnUse'%3E%3Cstop stop-color='%23155eef'/%3E%3Cstop offset='1' stop-color='%234f8eff'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ctext x='16' y='16' text-anchor='middle' dominant-baseline='central' fill='white' font-family='system-ui,sans-serif' font-size='18' font-weight='700'%3EW%3C/text%3E%3C/svg%3E">
 <style>
 /* ===== CSS Variables ===== */
@@ -1002,6 +1003,24 @@ input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(21,94,239
 .toast.toast-error { border-left: 3px solid var(--danger); }
 .toast.toast-info { border-left: 3px solid var(--primary); }
 
+/* ===== QR Code Popup ===== */
+.qr-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+.qr-popup {
+  display: none;
+  position: fixed;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 12px;
+  z-index: 9999;
+  white-space: nowrap;
+}
+.qr-popup img { display: block; }
+.btn-icon-qr:hover { background: var(--primary-soft); color: var(--primary); }
+
 </style>
 </head>
 <body>
@@ -1653,9 +1672,11 @@ async function loadFiles() {
         actionsHtml += `<button class="btn-icon btn-icon-site" title="打开网站" data-action="site" data-site-path="${escapeHtml(sitePath)}">&#9741;</button>`;
       }
       const folderPath = (currentPath ? currentPath + '/' : '') + f.name;
+      actionsHtml += `<div class="qr-wrapper"><button class="btn-icon btn-icon-qr" title="二维码" data-action="qrcode" data-qr-path="${escapeHtml(folderPath)}">&#9635;</button></div>`;
       actionsHtml += `<button class="btn-icon" title="下载文件夹" data-action="download-folder" data-folder-path="${escapeHtml(folderPath)}">&#8595;</button>`;
     } else {
       const filePath = (currentPath ? currentPath + '/' : '') + f.name;
+      actionsHtml += `<div class="qr-wrapper"><button class="btn-icon btn-icon-qr" title="二维码" data-action="qrcode" data-qr-path="${escapeHtml(filePath)}">&#9635;</button></div>`;
       actionsHtml += `<button class="btn-icon" title="下载" data-action="download" data-file-path="${escapeHtml(filePath)}">&#8595;</button>`;
     }
     const delPath = (currentPath ? currentPath + '/' : '') + f.name;
@@ -2581,6 +2602,71 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+/* ===== QR Popup ===== */
+/** 判断当前页面 origin 是否为内网地址 */
+function isLocalOrigin() {
+  try {
+    const h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1') return true;
+    const p = h.split('.').map(Number);
+    if (p.length === 4 && p.every(n => !isNaN(n))) {
+      if (p[0] === 10) return true;
+      if (p[0] === 172 && p[1] >= 16 && p[1] <= 31) return true;
+      if (p[0] === 192 && p[1] === 168) return true;
+    }
+    return false;
+  } catch { return false; }
+}
+
+let _qrPopup = null;
+let _qrCurrentUrl = null;
+
+function getQRPopup() {
+  if (!_qrPopup) {
+    _qrPopup = document.createElement('div');
+    _qrPopup.className = 'qr-popup';
+    document.body.appendChild(_qrPopup);
+  }
+  return _qrPopup;
+}
+
+function showQRPopup(btn) {
+  const popup = getQRPopup();
+  const qrPath = btn.dataset.qrPath;
+  // 内网访问用内网地址，外网访问用 tunnel 外网地址
+  const baseUrl = isLocalOrigin() ? window.location.origin : TUNNEL_URL;
+  const url = baseUrl + '/api/files/download?path=' + encodeURIComponent(qrPath);
+
+  // 按需生成二维码
+  if (_qrCurrentUrl !== url) {
+    popup.innerHTML = '';
+    _qrCurrentUrl = url;
+    new QRCode(popup, { text: url, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M });
+  }
+  popup.style.display = 'block';
+
+  // 定位：图片右边在鼠标左边，图片上边在鼠标下边
+  const mx = showQRPopup._lastX != null ? showQRPopup._lastX : 0;
+  const my = showQRPopup._lastY != null ? showQRPopup._lastY : 0;
+  popup.style.top = (my + 12) + 'px';
+  popup.style.left = Math.max(8, mx - popup.offsetWidth - 4) + 'px';
+}
+
+function hideQRPopup() {
+  if (_qrPopup) _qrPopup.style.display = 'none';
+}
+
+function toggleQRPopup(btn) {
+  const popup = getQRPopup();
+  const baseUrl = isLocalOrigin() ? window.location.origin : TUNNEL_URL;
+  const expected = baseUrl + '/api/files/download?path=' + encodeURIComponent(btn.dataset.qrPath);
+  if (popup.style.display === 'block' && _qrCurrentUrl === expected) {
+    hideQRPopup();
+  } else {
+    showQRPopup(btn);
+  }
+}
+
 /* ===== Init ===== */
 function setupActionButtons() {
   // Handle action buttons (site, download, delete)
@@ -2596,8 +2682,23 @@ function setupActionButtons() {
         downloadFolder(btn.dataset.folderPath);
       } else if (action === 'delete') {
         showDeleteModal(btn.dataset.deletePath, btn.dataset.deleteName);
+      } else if (action === 'qrcode') {
+        showQRPopup._lastX = e.clientX;
+        showQRPopup._lastY = e.clientY;
+        toggleQRPopup(btn);
+        return;
       }
     });
+  });
+
+  // 桌面端 hover 显示二维码，mouseleave 隐藏
+  document.querySelectorAll('.qr-wrapper').forEach(wrapper => {
+    wrapper.addEventListener('mouseenter', (e) => {
+      showQRPopup._lastX = e.clientX;
+      showQRPopup._lastY = e.clientY;
+      showQRPopup(wrapper.querySelector('[data-qr-path]'));
+    });
+    wrapper.addEventListener('mouseleave', hideQRPopup);
   });
 
   // Handle row clicks (navigate to folder, open file)
@@ -2612,8 +2713,17 @@ function setupActionButtons() {
       }
     });
   });
-}
 
+  // 点击空白处关闭二维码弹窗（只注册一次）
+  if (!setupActionButtons._qrDismissBound) {
+    setupActionButtons._qrDismissBound = true;
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.qr-wrapper') && !e.target.closest('.qr-popup')) {
+        hideQRPopup();
+      }
+    });
+  }
+}
 /* ===== Tunnel URL ===== */
 const TUNNEL_URL = 'https://web.long123456789.xyz';
 let tunnelPollTimer = null;
